@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<configuration scan="true" scanPeriod="10 seconds">
+
+    <springProfile name="test,prod">
+        <springProperty scope="context" name="logPath" source="logs.path" defaultValue="log"/>
+        <property name="LOG_HOME" value="${logPath}"/>
+
+        <appender name="rootFile"
+                  class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_HOME}/main.log</file>
+            <append>true</append>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_HOME}/main.log.%d{yyyy-MM-dd}.%i</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <maxHistory>180</maxHistory>
+                <totalSizeCap>512MB</totalSizeCap>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            </rollingPolicy>
+            <encoder>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} -%5p ${PID:-} [%15.15t] %-40.40logger{39} : %m%n
+                </Pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+        <appender name="rest"
+                  class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_HOME}/rest.log</file>
+            <append>true</append>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_HOME}/rest.log.%d{yyyy-MM-dd}.%i</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <maxHistory>180</maxHistory>
+                <totalSizeCap>512MB</totalSizeCap>
+                <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            </rollingPolicy>
+            <encoder>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} -%5p ${PID:-} [%15.15t] %-40.40logger{39} : %m%n
+                </Pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+
+        <logger name="cn.knet.domain.filter.LoggingClientHttpRequestInterceptor" level="info" additivity="false">
+            <appender-ref ref="rest"/>
+        </logger>
+
+        <root>
+            <level value="INFO"/>
+            <appender-ref ref="rootFile"/>
+        </root>
+    </springProfile>
+
+
+    <springProfile name="dev">
+        <!-- 彩色日志 -->
+        <!-- 彩色日志依赖的渲染类 -->
+        <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+        <conversionRule conversionWord="wex"
+                        converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+        <conversionRule conversionWord="wEx"
+                        converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+        <!-- 彩色日志格式 -->
+        <property name="CONSOLE_LOG_PATTERN"
+                  value="${CONSOLE_LOG_PATTERN:-%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
+        <!-- Console 输出设置 -->
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+                <charset>utf8</charset>
+            </encoder>
+        </appender>
+
+
+        <root>
+            <level value="INFO"/>
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>

@@ -1,0 +1,112 @@
+body {
+    font: 12px Helvetica Neue, Helvetica, PingFang SC, Tahoma, Arial, sans-serif;
+}
+
+.layui-layout-admin .layui-header {
+    background-color: #FFFFFF;
+    height: 30px;
+    border-bottom: 1px solid #dddddd;
+}
+
+.layui-layout-admin .layui-logo {
+    line-height: 30px;
+    box-shadow: 0 0 0 0
+}
+
+.layui-nav .layui-nav-item {
+    line-height: 30px;
+}
+
+.layui-layout-admin .layui-side {
+    top: 30px;
+    border-right: 1px solid #dddddd;
+}
+
+.layui-layout-admin .layui-right {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    width: 200px;
+    top: 30px;
+    border-left: 1px solid #dddddd;
+    overflow-x: hidden;
+}
+
+.layui-layout-admin .layui-body {
+    top: 30px;
+}
+
+.layui-body {
+    right: 200px;
+    left:0px;
+}
+
+.sql-db {
+    padding: 10px;
+
+}
+
+.layui-layout-admin .layui-footer {
+    right: 200px;
+    height: 30px;
+    line-height: 30px;
+}
+
+.layui-tab {
+    margin: 0;
+}
+
+.layui-tab-title {
+    height: 25px;
+}
+
+.layui-tab-title li {
+    line-height: 25px;
+    border-right: 1px solid #dddddd;
+    font-size: 12px
+
+}
+
+.layui-tab-title .layui-this {
+    color: green;
+}
+
+.layui-tab-title .layui-this:after {
+    border-style: none;
+    color: green;
+}
+
+.layui-tab-content {
+    padding: 0;
+}
+
+
+.CodeMirror {
+    border-bottom: 1px solid #dddddd;
+}
+
+.sql-title {
+    height: 25px;
+}
+
+.sql-title .layui-btn-group {
+    float: right;
+}
+
+.sql-title .layui-btn-group .layui-btn {
+
+    border: 0
+}
+
+.layui-table, .layui-table-view {
+    margin: 0;
+}
+
+.sql-p10 {
+    padding: 10px 10px;
+}
+
+.sql-tip {
+    padding: 10px 10px;
+}

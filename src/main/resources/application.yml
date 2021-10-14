@@ -1,0 +1,23 @@
+server:
+  port: 10790
+spring:
+  profiles:
+    active: @profileActive@
+  application:
+    name: knet-domain-sql
+  mvc:
+    view:
+      prefix: /WEB-INF/views/
+      suffix: .jsp
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    default-property-inclusion: always
+    time-zone: GMT+8
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: -1
+      max-request-size: -1
+logs:
+  path: /home/wz/workspace/${spring.application.name}/log
+

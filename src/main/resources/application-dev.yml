@@ -1,0 +1,45 @@
+server:
+  servlet:
+    jsp:
+      init-parameters:
+        development: true
+spring:
+  datasource:
+    wz:
+      driver-class-name: com.p6spy.engine.spy.P6SpyDriver
+      #oracle.jdbc.driver.OracleDriver
+      url: jdbc:p6spy:oracle:thin:@default.test.db.knet.cn:1521:oragbk
+      username: knet
+      password: knet43
+      dbcp2:
+        max-idle: 30
+        min-idle: 5
+        initial-size: 5
+        max-wait-millis: 12000
+        test-on-borrow: false
+        test-on-return: false
+        test-while-idle: true
+        validation-query: select 1 from dual
+        time-between-eviction-runs-millis: 180000
+        num-tests-per-eviction-run: 3
+        min-evictable-idle-time-millis: 180000
+      type: org.apache.commons.dbcp2.BasicDataSource
+    seal:
+      driver-class-name: com.p6spy.engine.spy.P6SpyDriver
+      #oracle.jdbc.driver.OracleDriver
+      url: jdbc:p6spy:oracle:thin:@default.test.db.knet.cn:1521:orautf8
+      username: kx_seal_test
+      password: cnnic
+      dbcp2:
+        max-idle: 30
+        min-idle: 5
+        initial-size: 5
+        max-wait-millis: 12000
+        test-on-borrow: false
+        test-on-return: false
+        test-while-idle: true
+        validation-query: select 1 from dual
+        time-between-eviction-runs-millis: 180000
+        num-tests-per-eviction-run: 3
+        min-evictable-idle-time-millis: 180000
+      type: org.apache.commons.dbcp2.BasicDataSource
