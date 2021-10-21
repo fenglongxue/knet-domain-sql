@@ -25,12 +25,14 @@
     <div class="layui-header">
         <div class="layui-logo layui-hide-xs ">DB MANAGER</div>
         <div class="sql-title" style="padding-left: 200px;margin-top: 5px">
-            <select style="float: left">
-                <option>网址</option>
-                <option>可信</option>
-            </select>
+            <div class="sql-select">
+                <select id="sqlType" style="float: left">
+                    <option>网址</option>
+                    <option>可信</option>
+                </select>
+            </div>
             <div class="layui-btn-group" style="float: left;padding-left:50px ">
-                <button type="button" class="layui-btn layui-btn-primary layui-btn-xs"><i class="layui-icon">&#xe623;</i>运行</button>
+                <button type="button" onclick="check()" class="layui-btn layui-btn-primary layui-btn-xs"><i class="layui-icon">&#xe623;</i>运行</button>
                 <button type="button" class="layui-btn layui-btn-primary layui-btn-xs"><i class="layui-icon">&#xe623;&#xe623;</i>批量更新</button>
             </div>
         </div>
@@ -43,11 +45,11 @@
                     <dd><a href="">退出</a></dd>
                 </dl>
             </li>
-            <li class="layui-nav-item" lay-header-event="menuRight" lay-unselect>
-                <a href="javascript:;">
-                    <i class="layui-icon layui-icon-more-vertical"></i>
-                </a>
-            </li>
+<%--            <li class="layui-nav-item" lay-header-event="menuRight" lay-unselect>--%>
+<%--                <a href="javascript:;">--%>
+<%--                    <i class="layui-icon layui-icon-more-vertical"></i>--%>
+<%--                </a>--%>
+<%--            </li>--%>
         </ul>
     </div>
 
@@ -56,14 +58,18 @@
     <div class="layui-body">
         <!-- 内容主体区域 -->
         <div>
-            <textarea id="code"></textarea>
+            <textarea id="code">SELECT * FROM Websites</textarea>
         </div>
         <div class="layui-tab" lay-filter="demo">
-            <ul class="layui-tab-title">
-                <li class="layui-this" lay-id="11">查询</li>
-                <li lay-id="22">更新</li>
-                <li lay-id="33">表操作</li>
-            </ul>
+            <div class="layui-tab-title">
+                <ul>
+                    <li class="layui-this" lay-id="11">查询</li>
+                    <li lay-id="22">更新</li>
+                    <li lay-id="33">表操作</li>
+                </ul>
+                <div class="btn-close"><i class="layui-icon">&#x1006;</i></div>
+            </div>
+
             <div class="layui-tab-content">
                 <div class="layui-tab-item layui-show">
                     <div class="sql-title">
@@ -161,14 +167,16 @@
 
     </div>
     <div class="layui-right">
-
         <div class="layui-side-scroll">
             <div class="sql-db">
-                <select>
-                    <option>全部</option>
-                    <option>我的</option>
-                    <option>分享</option>
-                </select><input type="text" placeholder="输入关键字查询">
+                <div class="warpper">
+                    <select>
+                        <option>全部</option>
+                        <option>我的</option>
+                        <option>分享</option>
+                    </select>
+                    <input type="text" placeholder="输入关键字查询">
+                </div>
             </div>
             <table class="layui-table" lay-size="sm">
 
@@ -221,6 +229,8 @@
 
 <script>
 
+    var $ = layui.jquery;
+    var pageNumber = 10;
     var editor;
     window.onload = function () {
         editor = CodeMirror.fromTextArea(document.getElementById('code'), {
@@ -241,9 +251,18 @@
 
 
     function check() {
+        var sqlType = $('#sqlType').val();
+        var sqlCode = editor.getValue();
+        var sqlArr = sqlCode.split(';');
+        console.log(sqlArr)
+        $.post("http://localhost:10790/sql/test2?sql=a", {sql:sqlArr, type: sqlType, pageNumber: pageNumber }, function (data) {
+
+        })
         alert(editor.getValue());
     }
+    $(function(){
 
+    })
 
 </script>
 </body>
