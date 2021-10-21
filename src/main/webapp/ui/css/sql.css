@@ -9,7 +9,7 @@ body {
 }
 
 .layui-layout-admin .layui-logo {
-    line-height: 30px;
+    line-height: 32px;
     box-shadow: 0 0 0 0
 }
 
@@ -44,7 +44,26 @@ body {
 
 .sql-db {
     padding: 10px;
-
+}
+.sql-db .warpper {
+    width: 180px;
+    height: 26px;
+    border:1px solid #9d9d9d;
+    border-radius: 4px;
+}
+.sql-db .warpper select {
+    border:none;
+    width: 50px;
+    height: 100%;
+    background: none;
+    text-align: center;
+}
+.sql-db .warpper input {
+    width: 120px;
+    height: 70%;
+    border:none;
+    border-left:1px solid #9d9d9d;
+    padding-left: 5px;
 }
 
 .layui-layout-admin .layui-footer {
@@ -109,4 +128,37 @@ body {
 
 .sql-tip {
     padding: 10px 10px;
+}
+.layui-nav .layui-nav-item a {
+    color: #000;
+}
+.layui-nav .layui-nav-item a:hover, .layui-nav .layui-this a {
+    color: #000;
+}
+.layui-nav .layui-this:after, .layui-nav-bar {
+    height: 0;
+}
+.layui-nav-child {
+    position: absolute;
+    left: 0;
+    top: 28px;
+}
+.btn-close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 99;
+    width: 30px;
+    height: 26px;
+    line-height: 26px;
+    color: #000;
+    font-size: 14px;
+    cursor: pointer;
+}
+.sql-select select {
+    height: 22px;
+    width: 70px;
+    border-color: #9d9d9d;
+    color: #3a3a3a;
+    border-radius: 4px;
 }
