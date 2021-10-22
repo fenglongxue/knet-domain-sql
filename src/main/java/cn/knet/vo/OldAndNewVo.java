@@ -1,9 +1,11 @@
 package cn.knet.vo;
 
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 @Data
-public class OldAndNewVo {
+@Accessors(chain = true)
+public class OldAndNewVo{
     String key;
     Object oldValue;
     Object newValue;
