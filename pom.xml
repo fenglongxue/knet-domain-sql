@@ -16,6 +16,7 @@
     <description>knet-domain-sql</description>
     <properties>
         <java.version>1.8</java.version>
+        <shiro.version>1.7.1</shiro.version>
     </properties>
     <dependencies>
         <dependency>
@@ -28,6 +29,27 @@
             <groupId>com.alibaba</groupId>
             <artifactId>druid</artifactId>
             <version>1.2.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-core</artifactId>
+            <version>${shiro.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-spring</artifactId>
+            <version>${shiro.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-web</artifactId>
+            <version>${shiro.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-ehcache</artifactId>
+            <version>${shiro.version}</version>
         </dependency>
 
         <dependency>
@@ -103,6 +125,22 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>3.12.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context-support</artifactId>
+            <version>5.3.3</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>cn.knet.domain</groupId>
+            <artifactId>knet-domain-base</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
         </dependency>
     </dependencies>
 
