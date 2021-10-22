@@ -1,7 +1,10 @@
 package cn.knet.service;
 
+import cn.knet.util.SqlParserTool;
 import cn.knet.util.UUIDGenerator;
 import cn.knet.vo.DbResult;
+import cn.knet.vo.KnetSqlLog;
+import cn.knet.vo.KnetSqlShare;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,40 +24,52 @@ public class LogEngineService {
     @Autowired
     @Qualifier("sealJdbcTemplate")
     protected JdbcTemplate  sealJdbcTemplate;
+
     /**
-     * 插入日志
-     * @param sql
+     * 
+     * @param sqsl
      * @param type
+     * @param opType
+     * @param sigo
+     * @param email
+     * @param userId
+     * @param sqlResu
+     * @param old
+     * @param now
      * @return
+     * @throws Exception
      */
-    public DbResult logSava(String sql, String type,String opType,String sigo,String email,String userId,String sqlResu) throws Exception {
-        String insertSql = "INSERT INTO KNET_SQL_LOG (ID,SQL,TYPE,OP_TYPE,SIGO,EMAIL,USER_ID,SQL_RESU) VALUES (?,?,?,?,?,?,?,?);";
-        jdbcTemplate.update(insertSql, UUIDGenerator.getUUID(),sql,type,opType,sigo,email,userId,sqlResu);
+    public DbResult logSava(KnetSqlLog log)  {
+        String insertSql = "INSERT INTO KNET_SQL_LOG (ID,SQL,TYPE,OP_TYPE,SIGO,EMAIL,USER_ID,SQL_RESU,old,now) VALUES (?,?,?,?,?,?,?,?,?,?)";
+        jdbcTemplate.update(insertSql, UUIDGenerator.getUUID(),log.getSql(),log.getType(),log.getOpType(),log.getSigo(),log.getEmail(),log.getUserId(),log.getSqlResu(),log.getOld(),log.getNow());
         return  new DbResult();
     }
+
     /**
-     * 保存分享日志
+     *
      * @param sql
-     * @param type
+     * @param storType
+     * @param title
+     * @param userId
      * @return
+     * @throws Exception
      */
-    public DbResult logShare(String sql, String storType,String title,String userId) throws Exception {
-        String insertSql = "INSERT INTO KNET_SQL_LOG (ID,SQL,STOR_TYPE,TITLE,USER_ID) VALUES (?,?,?,?,?);";
-        jdbcTemplate.update(insertSql, UUIDGenerator.getUUID(),sql,storType,title,userId);
+    public DbResult logShare(KnetSqlShare share) {
+        String insertSql = "INSERT INTO KNET_SQL_SHARE (ID,SQL,STOR_TYPE,TITLE,USER_ID) VALUES (?,?,?,?,?)";
+        jdbcTemplate.update(insertSql, UUIDGenerator.getUUID(),share.getSql(),share.getStorType(),share.getTitle(),share.getUserId());
         return  new DbResult();
     }
     /**
      * 查询日志
-     * @param sql
-     * @param type
+     * @param userId
      * @return
      */
-    public DbResult logList(String userId) throws Exception {
-        StringBuffer listSql =  new StringBuffer("select * from KNET_SQL_LOG ");
+    public DbResult logList(String userId) {
+        StringBuffer listSql =  new StringBuffer("select sql,type,op_type,u.name from KNET_SQL_LOG l left join KNET_USER u where l.USER_ID=U.ID ");
         if(StringUtils.isNotBlank(userId)){
-            listSql.append("where USER_ID=?");
+            listSql.append("and USER_ID=?");
         }
-        List<Map<String, Object>> list = jdbcTemplate.queryForList(listSql.toString(), userId);
+        List<Map<String, Object>> list = jdbcTemplate.queryForList(SqlParserTool.setRowNum(listSql.toString(),50));
         return  new DbResult(1000,list);
     }
 }

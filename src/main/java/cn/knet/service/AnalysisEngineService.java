@@ -1,25 +1,16 @@
 package cn.knet.service;
 
-import cn.knet.util.SqlFormatUtil;
 import cn.knet.util.SqlParserTool;
 import cn.knet.vo.DbResult;
 import cn.knet.vo.OldAndNewVo;
-import cn.knet.vo.UpdateResult;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
-import net.sf.jsqlparser.parser.SimpleNode;
-import net.sf.jsqlparser.parser.Token;
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.update.Update;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 解析sqlServices
@@ -35,142 +27,162 @@ import java.util.Map;
 @Service
 @Slf4j
 public class AnalysisEngineService {
-    @Autowired
-    @Qualifier("wzJdbcTemplate")
-    protected JdbcTemplate jdbcTemplate;
-    @Autowired
-    @Qualifier("sealJdbcTemplate")
-    protected JdbcTemplate  sealJdbcTemplate;
     /**
-     * sql正确性校验
+     * 更新前的查找引擎
+     *
      * @param sql
-     * @param type
      * @return
      * @throws Exception
      */
-    public DbResult SqlCheckEngine(String sql, String type)  throws Exception{
-        DbResult dbResult = new DbResult();
-        Boolean s = SqlFormatUtil.sqlFormat(sql).getCode()==1000;
-        if(s){
-            dbResult.setMsg("格式正确！");
-            dbResult.setCode(1000);
-        }else {
-            dbResult.setMsg("格式错误！");
-            dbResult.setCode(500);
-        }
-        log.info("sql校验结果为：{}",s);
-        return dbResult;
-    }
-    /**
-     * 修改解析并返回修改前结果集
-     * @param sql
-     * @param type
-     * @return
-     * @throws Exception
-     */
-    public DbResult selectAnalysisEngine(String sql, String type)  throws Exception{
-        DbResult dbResult = new DbResult();
+    public DbResult updateForSelect(JdbcTemplate jdbcTemplate, String sql, int pageNumber,String i) {
+        log.info("解析sql为：{}", sql);
+        try {
+            Update updateStatement = getUpdateStatement(sql);
+            DbResult dbResult = queryDb(jdbcTemplate, getSelectSql(updateStatement), pageNumber);
+            //没有可设置的数据
+            if (dbResult.getCount() == 0 || null == dbResult.getData()) {
+                dbResult.setCode(1002).setData(null).setSql(sql);//单个查询统一返回一条sql
+                return dbResult;
+            }
+            Map<String, List<OldAndNewVo>> map = new HashMap<>();
+            dbResult.getData().stream().forEach(d -> {
+                List<OldAndNewVo> list = new ArrayList<>();
+                updateStatement.getColumns().forEach(c -> {
+                    if (d.containsKey(c.getColumnName().toUpperCase())) {
+                        OldAndNewVo vo = new OldAndNewVo();
+                        vo.setKey(c.getColumnName());
+                        vo.setNewValue(c.getASTNode().jjtGetLastToken().next.next.image);
+                        vo.setOldValue(d.get(c.getColumnName().toUpperCase()));
+                        list.add(vo);
+                    }
+                });
+                if(StringUtils.isNotBlank(i)){
+                    map.put(i, list);
+                }else{
+                    map.put(d.get("ROW_ID").toString(), list);
+                }
 
-        Select Select = (Select)SqlParserTool.getStatement(sql);
-        SelectBody selectBody = Select.getSelectBody();
-        log.info("解析查询sql为：{}",sql);
-        if(SqlParserTool.getLimit(selectBody).isLimitNull()){
-            SqlParserTool.setLimit(selectBody,10);
+            });
+            dbResult.setCode(1000).setMsg("查询成功！").setData(null).setMap(map).setSql(sql);//单个查询统一返回一条sql
+            return dbResult;
+        } catch (JSQLParserException e) {
+            return DbResult.error(1002, e.getCause().getMessage(), sql);
         }
-        this.queryDb(sql,type,dbResult,10);
-        return dbResult;
     }
-
-    /**
-     * 修改解析并返回修改前结果集
-     * @param sql
-     * @param type
+    public DbResult updateForSelectList(JdbcTemplate jdbcTemplate, String sql, int pageNumber,String i){
+        return updateForSelect(jdbcTemplate,sql,pageNumber,i);
+    }
+    /***
+     * 获取update的查询sql
+     * @param updateStatement
      * @return
-     * @throws Exception
      */
-    public UpdateResult updateAnalysisEngine(String sql, String type)  throws Exception{
-        UpdateResult dbResult = new UpdateResult();
-        log.info("解析sql为：{}",sql);
-        CCJSqlParserManager pm = new CCJSqlParserManager();
-        Statement upStatement = pm.parse( new StringReader(sql));
-        //获得Update对象
-        Update updateStatement = (Update) upStatement;
-        //活的修改值
-        StringBuffer getSelectSql = new StringBuffer("select ");
-        List<Expression> expressions=updateStatement.getExpressions();
-        List<Column> columns = updateStatement.getColumns();
-        columns.forEach(x->{
-            getSelectSql.append(x.getColumnName()+",");
+    public String getSelectSql(Update updateStatement) {
+        StringBuffer selectSql = new StringBuffer("select ");
+        updateStatement.getColumns().forEach(x -> {
+            selectSql.append(x.getColumnName() + ",");
         });
-        if(columns.size()>0){
-            getSelectSql.deleteCharAt(getSelectSql.length()-1);
+        if (updateStatement.getColumns().size() > 0) {
+            selectSql.deleteCharAt(selectSql.length() - 1);
         }
-        //获得表名
-        log.info("修改表名为"+updateStatement.getTable().getName());
-        Table table = updateStatement.getTable();
-        updateStatement.getTable().getName();
-        getSelectSql.append(" from "+table.getName() +" ");
-        //获得where条件表达式
+        String table = updateStatement.getTable().getName();
+        table=(null!=updateStatement.getTable().getAlias())?table+" "+updateStatement.getTable().getAlias().toString():table+" ";
+        selectSql.append(" from " + table);
         Expression where = updateStatement.getWhere();
-        //初始化接收获得到的字段信息
-        StringBuffer allColumnNames = new StringBuffer();
-        if(where instanceof BinaryExpression){
-            log.info("where 条件为:{}",((BinaryExpression)where).toString());
-            getSelectSql.append(" where "+((BinaryExpression)where).toString());
+        if (where instanceof BinaryExpression) {
+            log.info("where 条件为:{}", ((BinaryExpression) where).getLeftExpression());
+            selectSql.append(" where " + where.toString());
         }
-        log.info("拼接的查询sql为：{}",getSelectSql.toString());
-        dbResult = this.queryDbByWhere(sql,type,dbResult,10,expressions,columns);
-        return dbResult;
+        log.info("拼接的查询sql为：{}", selectSql.toString());
+        return selectSql.toString();
     }
 
     /**
      * oracle查询默认增加分页增加分页
+     *
      * @param sql
-     * @param type
-     * @param result
      * @param pageNumber
      * @return
      */
-    public DbResult queryDb(String sql,String type,DbResult result,int pageNumber){
-        List list;
-        result.setCount(jdbcTemplate.queryForObject(SqlParserTool.getCount(sql),int.class));
-        result.setSql(sql);
-        if("wz".equals(type)){
-            list = jdbcTemplate.queryForList(SqlParserTool.setRowNum(sql,pageNumber));
-        }else{
-            list = sealJdbcTemplate.queryForList(SqlParserTool.setRowNum(sql,pageNumber));
+    public DbResult queryDb(JdbcTemplate jdbcTemplate, String sql, int pageNumber) {
+        try {
+            DbResult result = new DbResult();
+            log.info("计数sql:{}", SqlParserTool.getCount(sql));
+            result.setCount(jdbcTemplate.queryForObject(SqlParserTool.getCount(sql), int.class));
+            log.info("分页sql:{}", SqlParserTool.setRowNum(sql, pageNumber));
+            List list = jdbcTemplate.queryForList(SqlParserTool.setRowNum(sql, pageNumber));
+            if (null != list && list.size() > 0) {
+                AtomicReference<AtomicReference<String>> titleAtomic = new AtomicReference<>();
+                Map<String, Object> map= (Map<String, Object>) list.get(0);
+                map.forEach((k,v)->{
+                    titleAtomic.set(new AtomicReference<>(null!=titleAtomic.get()?titleAtomic.get()+","+k:k));
+                    });
+                result.setData(list).setCode(1000).setMsg("查询成功！").setSql(sql).setTitle(titleAtomic.get().toString().split(","));
+            } else {
+                result.setMsg("没有查询出符合条件的数据").setCode(1002).setSql(sql);
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("操作执行出错{}", e.getCause().getMessage());
+            return DbResult.error(1002, e.getCause().getMessage(),sql);
         }
-        if(null!=list&&list.size()>0){
-            result.setData(list);
-            result.setMsg("成功执行");
-            result.setCode(1000);
-        }else {
-            result.setMsg("未解析到相关数据");
-            result.setCode(500);
-        }
-        return result;
+
     }
-    public UpdateResult queryDbByWhere(String sql, String type, DbResult result, int pageNumber, List<Expression> expressions, List<Column> columns){
-        DbResult dbResult=queryDb(sql,type,result,pageNumber);
-        Map<String, List<OldAndNewVo>> map=new HashMap<>();
-        dbResult.getData().stream().forEach(d->{
-            List<OldAndNewVo> list=new ArrayList<>();
-          columns.forEach(c->{
-              if(d.containsKey(c.getColumnName().toUpperCase())){
-                  OldAndNewVo vo=new OldAndNewVo();
-                  vo.setKey(c.getColumnName());
-                  vo.setNewValue(c.getASTNode().jjtGetLastToken().next.next.image);
-                  vo.setOldValue(d.get(c.getColumnName().toUpperCase()));
-                  list.add(vo);
-              }
-          });
-            map.put(d.get("ID").toString(),list);
-        });
-        UpdateResult updateResult=new UpdateResult();
-        BeanUtils.copyProperties(dbResult,updateResult);
-        updateResult.setData(null);
-        updateResult.setList(map);
-        updateResult.setSql(sql);
-        return updateResult;
+
+    /***
+     * 表操作
+     * @param jdbcTemplate
+     * @param sql
+     * @return
+     */
+    public DbResult alertAnalysisEngine(JdbcTemplate jdbcTemplate, String sql) {
+        log.info("表操作执行的sql{}", sql);
+        try {
+            String table = getUpdateStatement(sql).getTable().getName();
+            if (sql.toUpperCase().contains("DROP")) {
+                DbResult result = queryDb(jdbcTemplate, sql, 50);//只是为了查询有没有数据
+                if (result.getCount() != 0) {
+                    log.error("数据表" + table + "中有数据，无法执行此操作！");
+                    return DbResult.error(1002, "数据表" + table + "中有数据，无法执行此操作！");
+                }
+            }
+            jdbcTemplate.execute(sql);
+            log.info(table + "表操作执行成功");
+            return DbResult.success(table + "表操作执行成功");
+        } catch (Exception e) {
+            log.error("表操作执行出错{}", e.getCause().getMessage());
+            return DbResult.error(1002, e.getCause().getMessage());
+        }
+    }
+
+    /***
+     * 更新操作
+     * @param jdbcTemplate
+     * @param sql
+     * @return
+     */
+    public DbResult updateAnalysisEngine(JdbcTemplate jdbcTemplate, String sql) {
+        log.info("更新执行的sql{}", sql);
+        try {
+            String table = getUpdateStatement(sql).getTable().getName();
+            int i = jdbcTemplate.update(sql);
+            log.info("表" + table + "一共更新数据{}条", i);
+            return DbResult.success("表" + table + "一共更新数据" + i + "条", sql);
+        } catch (Exception e) {
+            log.error("更新出错{}", e.getCause().getMessage());
+            return DbResult.error(1002, e.getCause().getMessage(), sql);
+        }
+    }
+
+    /***
+     * 获取UpdateStatement对象
+     * @param sql
+     * @return
+     * @throws JSQLParserException
+     */
+    public Update getUpdateStatement(String sql) throws JSQLParserException {
+        CCJSqlParserManager pm = new CCJSqlParserManager();
+        Statement statement = pm.parse(new StringReader(sql));
+        return (Update) statement;
     }
 }
