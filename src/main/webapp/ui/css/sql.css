@@ -100,11 +100,6 @@ body {
     padding: 0;
 }
 
-
-.CodeMirror {
-    border-bottom: 1px solid #dddddd;
-}
-
 .sql-title {
     height: 25px;
 }
@@ -114,12 +109,16 @@ body {
 }
 
 .sql-title .layui-btn-group .layui-btn {
-
     border: 0
 }
 
 .layui-table, .layui-table-view {
     margin: 0;
+}
+.sql-title .layui-btn-group .layui-btn img {
+    height: 15px;
+    margin-right: 6px;
+    margin-left: 15px;
 }
 
 .sql-p10 {
@@ -161,4 +160,22 @@ body {
     border-color: #9d9d9d;
     color: #3a3a3a;
     border-radius: 4px;
+}
+.layui-tab {
+    border-top: 1px solid #dddddd;
+}
+.layui-tab.closeTab{
+    position: fixed;
+    bottom: 0;
+    height: 30px;
+    width: calc( 100% - 200px )
+}
+.layui-tab.closeTab .btn-close {
+    transform: rotate(90deg);
+}
+.layui-tab.closeTab .btn-close i{
+    display: block;
+    padding-top: 6px;
+    padding-left: 8px;
+    font-size: 14px;
 }
