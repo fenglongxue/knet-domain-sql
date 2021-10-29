@@ -52,6 +52,8 @@ public class IndexController extends  SuperController {
         Subject subject = SecurityUtils.getSubject();
         try {
             subject.login(token);
+            KnetUser user = (KnetUser) subject.getPrincipal();
+            subject.getSession().setAttribute("user", user);
             r.put("code", "0");
         } catch (Exception ae) {
             r.put("code", "1");
