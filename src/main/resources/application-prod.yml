@@ -9,15 +9,14 @@ spring:
       username: nacos
       password: wz@Knet.cn
       discovery:
-        server-addr: 202.173.14.69:8848,202.173.14.94:8848,202.173.9.28:8848
-    #        server-addr: 202.173.9.28:4484
+        server-addr: nacos.knetreg.cn:80
   datasource:
     wz:
       driver-class-name: com.p6spy.engine.spy.P6SpyDriver
       #oracle.jdbc.driver.OracleDriver
-      url: jdbc:p6spy:oracle:thin:@default.test.db.knet.cn:1521:oragbk
+      url: jdbc:oracle:thin:@vdbwlk.knet.cn:1521:ora9
       username: knet
-      password: knet43
+      password: kwdomain
       dbcp2:
         max-idle: 30
         min-idle: 5
