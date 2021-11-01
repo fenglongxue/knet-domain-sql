@@ -1,27 +1,20 @@
 package cn.knet.util;
+
+import cn.knet.enums.SqlType;
+import cn.knet.vo.DbResult;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.alter.Alter;
-import net.sf.jsqlparser.statement.create.index.CreateIndex;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
-import net.sf.jsqlparser.statement.create.view.CreateView;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.drop.Drop;
-import net.sf.jsqlparser.statement.execute.Execute;
 import net.sf.jsqlparser.statement.insert.Insert;
-import net.sf.jsqlparser.statement.merge.Merge;
-import net.sf.jsqlparser.statement.replace.Replace;
-
 import net.sf.jsqlparser.statement.select.*;
-import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
-import net.sf.jsqlparser.statement.upsert.Upsert;
 import net.sf.jsqlparser.util.TablesNamesFinder;
+import org.apache.commons.lang3.StringUtils;
 
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,60 +29,59 @@ public class SqlParserTool {
 
     /**
      * 由于jsqlparser没有获取SQL类型的原始工具，并且在下面操作时需要知道SQL类型，所以编写此工具方法
+     * 目前只支持以下几个类型
      * @param sql sql语句
      * @return sql类型，
      * @throws JSQLParserException
      */
     public static SqlType getSqlType(String sql) throws JSQLParserException {
-        Statement sqlStmt = CCJSqlParserUtil.parse(new StringReader(sql));
+        Statement sqlStmt = CCJSqlParserUtil.parse(sql);
         if (sqlStmt instanceof Alter) {
             return SqlType.ALTER;
-        } else if (sqlStmt instanceof CreateIndex) {
-            return SqlType.CREATEINDEX;
         } else if (sqlStmt instanceof CreateTable) {
             return SqlType.CREATETABLE;
-        } else if (sqlStmt instanceof CreateView) {
-            return SqlType.CREATEVIEW;
-        } else if (sqlStmt instanceof Delete) {
-            return SqlType.DELETE;
-        } else if (sqlStmt instanceof Drop) {
+        }else if (sqlStmt instanceof Drop) {
             return SqlType.DROP;
-        } else if (sqlStmt instanceof Execute) {
-            return SqlType.EXECUTE;
         } else if (sqlStmt instanceof Insert) {
             return SqlType.INSERT;
-        } else if (sqlStmt instanceof Merge) {
-            return SqlType.MERGE;
-        } else if (sqlStmt instanceof Replace) {
-            return SqlType.REPLACE;
-        } else if (sqlStmt instanceof Select) {
+        }  else if (sqlStmt instanceof Select) {
             return SqlType.SELECT;
-        } else if (sqlStmt instanceof Truncate) {
-            return SqlType.TRUNCATE;
         } else if (sqlStmt instanceof Update) {
             return SqlType.UPDATE;
-        } else if (sqlStmt instanceof Upsert) {
-            return SqlType.UPSERT;
-        } else {
+        }else {
             return SqlType.NONE;
         }
     }
-
+    public static Statement getStatement(String sql) throws JSQLParserException {
+        DbResult result=SqlFormatUtil.sqlValidate(sql);
+        if(result.getCode()==1000){
+            return CCJSqlParserUtil.parse(sql);
+        }
+        return null;
+    }
     /**
-     * 获取sql操作接口,与上面类型判断结合使用
-     * example:
-     * String sql = "create table a(a string)";
-     * SqlType sqlType = SqlParserTool.getSqlType(sql);
-     * if(sqlType.equals(SqlType.SELECT)){
-     *     Select statement = (Select) SqlParserTool.getStatement(sql);
-     *  }
+     * 获取Statement
      * @param sql
      * @return
      * @throws JSQLParserException
      */
-    public static Statement getStatement(String sql) throws JSQLParserException {
-        Statement sqlStmt = CCJSqlParserUtil.parse(new StringReader(sql));
-        return sqlStmt;
+    public static Statement getStatementByType(String sql) throws JSQLParserException {
+        SqlType sqlType = SqlParserTool.getSqlType(sql);
+        if(sqlType.equals(SqlType.ALTER)){
+         return (Alter) SqlParserTool.getStatement(sql);
+       }else if(sqlType.equals(SqlType.SELECT)){
+           return (Select) SqlParserTool.getStatement(sql);
+        }else if(sqlType.equals(SqlType.CREATETABLE)){
+            return (CreateTable) SqlParserTool.getStatement(sql);
+        }else if(sqlType.equals(SqlType.DROP)){
+            return (Drop) SqlParserTool.getStatement(sql);
+        }else if(sqlType.equals(SqlType.INSERT)){
+            return (Insert) SqlParserTool.getStatement(sql);
+        }else if(sqlType.equals(SqlType.UPDATE)){
+            return (Update) SqlParserTool.getStatement(sql);
+        }else{
+            return null;
+        }
     }
 
     /**
@@ -97,9 +89,15 @@ public class SqlParserTool {
      * @param statement
      * @return
      */
-    public static List<String> getTableList(Select statement){
+    public static List<String> getTableList(Statement statement){
+        List<String> tableList=new ArrayList<>();
+        if (statement instanceof Drop) {
+            Drop drop= (Drop) statement;
+            tableList.add(drop.getName().getName());
+            return tableList;
+        }
         TablesNamesFinder tablesNamesFinder = new TablesNamesFinder();
-        List<String> tableList = tablesNamesFinder.getTableList(statement);
+        tableList = tablesNamesFinder.getTableList(statement);
         return tableList;
     }
 
@@ -115,38 +113,21 @@ public class SqlParserTool {
         }
         return new ArrayList<Join>();
     }
-
-    /**
-     *获取表名
-     * @param selectBody
-     * @return
-     */
-    public static List<Table> getIntoTables(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            List<Table> tables = ((PlainSelect) selectBody).getIntoTables();
-            return tables;
-        }
-        return new ArrayList<Table>();
-    }
-
-    /**
-     *
-     * @param selectBody
-     * @return
-     */
-    public static void setIntoTables(SelectBody selectBody,List<Table> tables){
-        if(selectBody instanceof PlainSelect){
-            ((PlainSelect) selectBody).setIntoTables(tables);
-        }
-    }
-
     /**
      * 添加分页
      * @param sql
      * @return
      */
     public static String setRowNum(String sql,int pageNumber){
-        return "SELECT * FROM ( SELECT TMP.*, ROWNUM ROW_ID FROM (" + sql +" ) TMP WHERE ROWNUM <="+pageNumber+50+") WHERE ROW_ID > "+pageNumber+"";
+        return "SELECT * FROM ( SELECT TMP.*, ROWNUM ROW_ID FROM (" + sql +" ) TMP WHERE ROWNUM <="+pageNumber+") WHERE ROW_ID > "+((pageNumber-50)>0?pageNumber-50:0)+"";
+    }
+    /**
+     * 添加分页
+     * @param sql
+     * @return
+     */
+    public static String setRowNum(String sql,int pageNumber,int pageSize){
+        return "SELECT * FROM ( SELECT TMP.*, ROWNUM ROW_ID FROM (" + sql +" ) TMP WHERE ROWNUM <="+pageNumber+") WHERE ROW_ID > "+((pageNumber-pageSize)>0?pageNumber-pageSize:0)+"";
     }
     /**
      * 添加分页
@@ -156,32 +137,6 @@ public class SqlParserTool {
     public static String getCount(String sql){
         return "SELECT count(*) FROM ( " + sql +" ) TMP ";
     }
-    /**
-     * 获取limit值
-     * @param selectBody
-     * @return
-     */
-    public static Limit getLimit(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            Limit limit = ((PlainSelect) selectBody).getLimit();
-            return limit;
-        }
-        return null;
-    }
-
-    /**
-     * 为SQL增加limit值
-     * @param selectBody
-     * @param l
-     */
-    public static void setLimit(SelectBody selectBody,long l){
-        if(selectBody instanceof PlainSelect){
-            Limit limit = new Limit();
-            limit.setRowCount(new LongValue(String.valueOf(l)));
-            ((PlainSelect) selectBody).setLimit(limit);
-        }
-    }
-
     /**
      * 获取FromItem不支持子查询操作
      * @param selectBody
@@ -257,5 +212,18 @@ public class SqlParserTool {
             System.out.println(subSelect.getSelectBody());
         }
     }
-
+    public static String getSqlEcception(Exception e) {
+        if(e instanceof NullPointerException){
+            return "空指针异常！";
+        }
+        String message;
+        if(StringUtils.isNotBlank(e.getMessage())){
+            message=e.getMessage();
+        }else if(StringUtils.isNotBlank(e.getCause().getMessage())){
+            message=e.getCause().getMessage();
+        }else{
+            message="没有获取到异常的具体信息";
+        }
+        return message;
+    }
 }
