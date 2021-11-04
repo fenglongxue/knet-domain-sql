@@ -77,18 +77,21 @@ body {
 }
 
 .layui-tab-title {
-    height: 25px;
+    height: 30px;
+    background: #fafafa;
 }
 
 .layui-tab-title li {
-    line-height: 25px;
+    line-height: 30px;
     border-right: 1px solid #dddddd;
-    font-size: 12px
-
+    font-size: 12px;
+    z-index: 90;
 }
 
 .layui-tab-title .layui-this {
     color: green;
+    background: #fff;
+    font-weight: bold;
 }
 
 .layui-tab-title .layui-this:after {
@@ -98,6 +101,8 @@ body {
 
 .layui-tab-content {
     padding: 0;
+    height: 100%;
+    width: 100%;
 }
 
 .sql-title {
@@ -127,6 +132,7 @@ body {
 
 .sql-tip {
     padding: 10px 10px;
+    line-height: 26px;
 }
 .layui-nav .layui-nav-item a {
     color: #000;
@@ -163,19 +169,101 @@ body {
 }
 .layui-tab {
     border-top: 1px solid #dddddd;
+    height: 100%;
 }
-.layui-tab.closeTab{
+.custom-drag-control.closeTab{
     position: fixed;
     bottom: 0;
     height: 30px;
     width: calc( 100% - 200px )
 }
-.layui-tab.closeTab .btn-close {
+.custom-drag-control.closeTab .btn-close {
     transform: rotate(90deg);
 }
-.layui-tab.closeTab .btn-close i{
+.custom-drag-control.closeTab .btn-close i{
     display: block;
     padding-top: 6px;
     padding-left: 8px;
     font-size: 14px;
+}
+.layui-right .layui-bg-red {
+    margin-left: 5px;
+}
+.layui-right .layui-table td span {
+    display: inline-block;
+    width: 100px;
+}
+.export-btn {
+    float: right;
+    margin-top: 20px;
+    padding: 0 16px;
+}
+.layui-layer.layui-layer-export .layui-layer-content{
+    padding-bottom: 5px;
+}
+.sqlRightList .deleteList {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: none;
+}
+.sqlRightList .deleteList.light{
+    display: block;
+    height: 40px;
+    width: 50px;
+    line-height: 40px;
+    background-image: linear-gradient(to right, #FF5722 0%, #ff6c3e 40%, transparent);
+    color: #FFFFFF;
+    font-size: 40px;
+    padding-left: 10px;
+    cursor: pointer;
+    animation: myfirst 0.1s;
+}
+.sqlRightList .deleteList.light i {
+    display: block;
+    width: 40px;
+    height: 40px;
+    background: url("../images/delete.png") center left no-repeat;
+    background-size: 20px auto;
+}
+@keyframes myfirst {
+    from { width: 0 }
+    to { width: 50px;}
+}
+.layui-tab .layui-tab-item {
+    height: 100%;
+}
+.layui-tab .layui-table-frame {
+    overflow: scroll;
+    height: calc( 100% - 60px );
+}
+.layui-tab .layui-tab-item tr td {
+    /*max-width: 200px;*/
+}
+
+.custom-drag-control {
+    width: calc( 100% - 200px );
+    height: 300px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+    background: #FFFFFF;
+}
+.custom-drag-control .drager {
+    position: absolute;
+    display: inline-block;
+    width: 25px;
+    height: 10px;
+    z-index: 1;
+    background: #fff
+}
+.custom-drag-control .top{
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    cursor: n-resize;
+    border-top: 1px solid #ddd;
+    background: #fafafa;
 }

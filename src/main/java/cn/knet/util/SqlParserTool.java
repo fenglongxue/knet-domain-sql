@@ -6,8 +6,8 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.alter.Alter;
+import net.sf.jsqlparser.statement.comment.Comment;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
-import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.drop.Drop;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.*;
@@ -24,8 +24,9 @@ import java.util.List;
  *
  */
 public class SqlParserTool {
-
-
+    private static final int PAGESIZE=50;
+    private SqlParserTool() {
+    }
 
     /**
      * 由于jsqlparser没有获取SQL类型的原始工具，并且在下面操作时需要知道SQL类型，所以编写此工具方法
@@ -48,7 +49,9 @@ public class SqlParserTool {
             return SqlType.SELECT;
         } else if (sqlStmt instanceof Update) {
             return SqlType.UPDATE;
-        }else {
+        }else if (sqlStmt instanceof Comment) {
+            return SqlType.COMMENT;
+        } else {
             return SqlType.NONE;
         }
     }
@@ -59,31 +62,6 @@ public class SqlParserTool {
         }
         return null;
     }
-    /**
-     * 获取Statement
-     * @param sql
-     * @return
-     * @throws JSQLParserException
-     */
-    public static Statement getStatementByType(String sql) throws JSQLParserException {
-        SqlType sqlType = SqlParserTool.getSqlType(sql);
-        if(sqlType.equals(SqlType.ALTER)){
-         return (Alter) SqlParserTool.getStatement(sql);
-       }else if(sqlType.equals(SqlType.SELECT)){
-           return (Select) SqlParserTool.getStatement(sql);
-        }else if(sqlType.equals(SqlType.CREATETABLE)){
-            return (CreateTable) SqlParserTool.getStatement(sql);
-        }else if(sqlType.equals(SqlType.DROP)){
-            return (Drop) SqlParserTool.getStatement(sql);
-        }else if(sqlType.equals(SqlType.INSERT)){
-            return (Insert) SqlParserTool.getStatement(sql);
-        }else if(sqlType.equals(SqlType.UPDATE)){
-            return (Update) SqlParserTool.getStatement(sql);
-        }else{
-            return null;
-        }
-    }
-
     /**
      * 获取tables的表名
      * @param statement
@@ -96,30 +74,43 @@ public class SqlParserTool {
             tableList.add(drop.getName().getName());
             return tableList;
         }
+        if (statement instanceof Alter) {
+            Alter alter= (Alter) statement;
+            tableList.add(alter.getTable().getName());
+            return tableList;
+        }
+        if (statement instanceof Comment) {
+            Comment comment= (Comment) statement;
+            tableList.add(comment.getColumn().getTable().getName());
+            return tableList;
+        }
+        if (statement instanceof CreateTable) {
+            CreateTable createTable= (CreateTable) statement;
+            tableList.add(createTable.getTable().getName());
+            return tableList;
+        }
+        if (statement instanceof Insert) {
+            Insert insert= (Insert) statement;
+            tableList.add(insert.getTable().getName());
+            return tableList;
+        }
+        if (statement instanceof Update) {
+            Update update= (Update) statement;
+            tableList.add(update.getTable().getName());
+            return tableList;
+        }
         TablesNamesFinder tablesNamesFinder = new TablesNamesFinder();
         tableList = tablesNamesFinder.getTableList(statement);
         return tableList;
     }
 
     /**
-     * 获取join层级
-     * @param selectBody
-     * @return
-     */
-    public static List<Join> getJoins(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            List<Join> joins =((PlainSelect) selectBody).getJoins();
-            return joins;
-        }
-        return new ArrayList<Join>();
-    }
-    /**
      * 添加分页
      * @param sql
      * @return
      */
     public static String setRowNum(String sql,int pageNumber){
-        return "SELECT * FROM ( SELECT TMP.*, ROWNUM ROW_ID FROM (" + sql +" ) TMP WHERE ROWNUM <="+pageNumber+") WHERE ROW_ID > "+((pageNumber-50)>0?pageNumber-50:0)+"";
+        return "SELECT * FROM ( SELECT TMP.*, ROWNUM ROW_ID FROM (" + sql +" ) TMP WHERE ROWNUM <="+PAGESIZE*pageNumber+") WHERE ROW_ID > "+(pageNumber>0?(pageNumber-1)*PAGESIZE:0)+"";
     }
     /**
      * 添加分页
@@ -137,21 +128,6 @@ public class SqlParserTool {
     public static String getCount(String sql){
         return "SELECT count(*) FROM ( " + sql +" ) TMP ";
     }
-    /**
-     * 获取FromItem不支持子查询操作
-     * @param selectBody
-     * @return
-     */
-    public static FromItem getFromItem(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            FromItem fromItem = ((PlainSelect) selectBody).getFromItem();
-            return fromItem;
-        }else if(selectBody instanceof WithItem){
-            SqlParserTool.getFromItem(((WithItem) selectBody).getSelectBody());
-        }
-        return null;
-    }
-
     /**
      * 获取子查询
      * @param selectBody
@@ -188,29 +164,6 @@ public class SqlParserTool {
             }
         }
         return false;
-    }
-
-    /**
-     * 获取查询字段
-     * @param selectBody
-     * @return
-     */
-    public static List<SelectItem> getSelectItems(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            List<SelectItem> selectItems = ((PlainSelect) selectBody).getSelectItems();
-            return selectItems;
-        }
-        return null;
-    }
-
-    public static void main(String[] args) throws JSQLParserException {
-        String sql = "select * from (select userid from a) a";
-        SqlType sqlType = SqlParserTool.getSqlType(sql);
-        if(sqlType.equals(SqlType.SELECT)){
-            Select statement = (Select) SqlParserTool.getStatement(sql);
-            SubSelect subSelect = SqlParserTool.getSubSelect(statement.getSelectBody());
-            System.out.println(subSelect.getSelectBody());
-        }
     }
     public static String getSqlEcception(Exception e) {
         if(e instanceof NullPointerException){

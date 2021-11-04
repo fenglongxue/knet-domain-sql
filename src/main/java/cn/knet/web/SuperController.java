@@ -8,13 +8,12 @@ import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.InitBinder;
 
-import javax.servlet.http.HttpServletRequest;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class SuperController {
-    protected KnetUser getCurrentLoginUser(HttpServletRequest request) {
+    protected KnetUser getCurrentLoginUser() {
         return (KnetUser) SecurityUtils.getSubject().getSession().getAttribute("user");
     }
     /**

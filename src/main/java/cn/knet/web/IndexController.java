@@ -20,7 +20,7 @@ public class IndexController extends  SuperController {
 
     @RequestMapping("/index")
     public String index(HttpServletRequest request, Model model) {
-        KnetUser userAccount = getCurrentLoginUser(request);
+        KnetUser userAccount = getCurrentLoginUser();
         model.addAttribute("userAccount", userAccount);
         return "index";
     }

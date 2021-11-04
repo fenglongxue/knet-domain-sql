@@ -28,17 +28,7 @@ public class KnetSqlLog implements Serializable {
     @TableField("OP_TYPE")
     private String opType;
 
-    /**
-     * 签报号
-     */
-    @TableField("SIGO")
-    private String sigo;
 
-    /**
-     * 邮件
-     */
-    @TableField("EMAIL")
-    private String email;
 
     /**
      * 操作人ID
@@ -53,22 +43,18 @@ public class KnetSqlLog implements Serializable {
     private Date createDate;
 
     /**
-     * 查询为查询结果，更新为更新记录（字段前后对比），日志查看时提供下载功能
+     * 查询为查询结果，日志查看时提供下载功能
      */
     @TableField("SQL_RESU")
     private String sqlResu;
+    public KnetSqlLog(String sql, String type, String opType,String sqlResu,String userId) {
+        this.sql = sql;
+        this.type = type;
+        this.opType = opType;
+        this.userId = userId;
+        this.sqlResu=sqlResu;
+    }
+    public KnetSqlLog(){
 
-    /**
-     * 修改前记录
-     */
-    @TableField("OLD")
-    private String old;
-
-    /**
-     * 修改后记录
-     */
-    @TableField("NOW")
-    private String now;
-
-
+    }
 }

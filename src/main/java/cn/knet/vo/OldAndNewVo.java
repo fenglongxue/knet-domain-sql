@@ -9,4 +9,5 @@ public class OldAndNewVo{
     String key;
     Object oldValue;
     Object newValue;
+    boolean isUpdate=false;
 }

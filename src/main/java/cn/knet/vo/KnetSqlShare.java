@@ -26,6 +26,11 @@ public class KnetSqlShare implements Serializable {
      */
     @TableField("STOR_TYPE")
     private String storType;
+    /**
+     * SHARE（分享）、SAVE（保存）
+     */
+    @TableField("type")
+    private String type;
 
     /**
      * 保存sql用途
@@ -38,6 +43,7 @@ public class KnetSqlShare implements Serializable {
      */
     @TableField("USER_ID")
     private String userId;
+
 
     /**
      * 创建日期

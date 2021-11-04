@@ -13,4 +13,5 @@ public class OldAndNewForPlVo{
     String sql;
     int code;
     String msg;
+    List<String> title;
 }

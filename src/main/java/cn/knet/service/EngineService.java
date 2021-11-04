@@ -1,21 +1,18 @@
 package cn.knet.service;
 
 import cn.knet.enums.SqlType;
+import cn.knet.util.SqlFormatUtil;
+import cn.knet.util.SqlParserTool;
 import cn.knet.vo.DbResult;
 import cn.knet.vo.DbResultForPl;
 import cn.knet.vo.OldAndNewForPlVo;
-import cn.knet.vo.OldAndNewVo;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.jdbc.core.JdbcTemplate;
+import net.sf.jsqlparser.JSQLParserException;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 引擎接口
@@ -23,15 +20,10 @@ import java.util.Map;
 @Service
 @Slf4j
 public class EngineService {
-
-    @Autowired
-    @Qualifier("wzJdbcTemplate")
-    protected JdbcTemplate jdbcTemplate;
-    @Autowired
-    @Qualifier("sealJdbcTemplate")
-    protected JdbcTemplate sealJdbcTemplate;
     @Resource
     AnalysisEngineService analysisEngineService;
+    @Resource
+    LogEngineService logEngineService;
 
     /***
      * 运行操作：具体执行那个引擎
@@ -41,92 +33,119 @@ public class EngineService {
      * @return
      * @throws Exception
      */
-    public List<DbResult> exc(String[] sqls, String type, int pageNumber) throws Exception {
+    public List<DbResult> exc(String[] sqls, String type, int pageNumber, String userId) {
         List<DbResult> list = new ArrayList<>();
-        if (null == sqls) {
-            list.add(DbResult.error(1002, "参数不能为空！"));
-            return list;
+        for (String  sql:sqls) {
+            //先校验语法和格式
+            DbResult dbResult=SqlFormatUtil.sqlValidate(sql);
+            if(dbResult.getCode()!=1000){
+                list.add(dbResult);
+            }else{
+                try {
+                    SqlType opType = SqlParserTool.getSqlType(sql);
+                    if (opType.equals(SqlType.SELECT)) {
+                        list.add(select(sql, type, pageNumber, opType));
+                    } else if (opType.equals(SqlType.UPDATE)) {
+                        list.add(updateForSelect(sql, type, SqlType.UPDATESELECT));
+                    } else if (opType.equals(SqlType.INSERT)) {
+                        list.add(insert(sql, type, opType, userId));
+                    } else if (opType.equals(SqlType.COMMENT) ||opType.equals(SqlType.ALTER) || opType.equals(SqlType.CREATETABLE) || opType.equals(SqlType.DROP)) {
+                        list.add(alert(sql, type, opType, userId));
+                    } else {
+                        list.add(DbResult.error(1002, "操作类型不支持！",sql));
+                    }
+                } catch (JSQLParserException e) {
+                    list.add(DbResult.error(1002, "出现异常，" + SqlParserTool.getSqlEcception(e),sql));
+                }
+            }
         }
-        String sql = sqls[0].toUpperCase();
-        SqlType opType = sql.contains("SELECT") ? SqlType.SELECT : (sql.contains("UPDATE") ? SqlType.UPDATESELECT : SqlType.ALTER);
-        if (opType.equals(SqlType.SELECT)) {
-            return selectEngine(sqls, type, pageNumber, opType);
-        } else if (opType.equals(SqlType.UPDATESELECT)) {
-            return updateForSelect(sqls, type, pageNumber, opType);
-        } else {
-            return alertAnalysisEngine(sqls, type, opType);
-        }
+        return list;
     }
 
     /***
      * 查询引擎
-     * @param sqls
+     * @param sql
      * @param pageNumber
      * @return
      */
-    public List<DbResult> selectEngine(String sqls[], String type, int pageNumber, SqlType opType) {
-        List<DbResult> list = new ArrayList<>();
-        for (String sql : sqls) {
-            DbResult dbResult = analysisEngineService.queryDb("wz".equalsIgnoreCase(type) ? jdbcTemplate : sealJdbcTemplate, sql, pageNumber);
-            dbResult.setSqlType(opType.name());
-            list.add(dbResult);
-        }
-        return list;
+    public DbResult select(String sql, String type, int pageNumber, SqlType opType) {
+        DbResult dbResult =SqlFormatUtil.queryValidate(sql);
+        if (dbResult.getCode() != 1000) return dbResult.setSqlType(opType.name());
+        return analysisEngineService.queryDb(type, sql, pageNumber).setSqlType(opType.name());
     }
 
     /***
      * 更新前的查找引擎
-     * @param sqls
+     * 返回多个查询页
+     * @param sql
      * @param type
-     * @param pageNumber
      * @return
      * @throws Exception
      */
-    public List<DbResult> updateForSelect(String[] sqls, String type, int pageNumber, SqlType opType) {
-        List<DbResult> list = new ArrayList<>();
-        for (String sql : sqls) {
-                DbResult dbResult = analysisEngineService.updateForSelect("wz".equalsIgnoreCase(type) ? jdbcTemplate : sealJdbcTemplate, sql, pageNumber,"");
-                dbResult.setSqlType(opType.name());
-                list.add(dbResult);
-        }
-        return list;
+    public DbResult updateForSelect(String sql, String type, SqlType opType) {
+        DbResult dbResult = SqlFormatUtil.updateValidate(new String[]{sql}, false);
+        if (dbResult.getCode() != 1000) return dbResult.setSqlType(opType.name());
+        dbResult=analysisEngineService.updateForSelect(type, sql,100);
+        //只取前100条展示
+        return dbResult.setSqlType(opType.name());
     }
 
     /**
      * 更新引擎
-     *
      * @param sqls
      * @return
      */
-    public List<DbResult> updateEngine(String sqls[], String type, SqlType opType) {
+    public List<DbResult> update(String[] sqls,String type,SqlType opType,String userId) {
         List<DbResult> list = new ArrayList<>();
+        DbResult dbResult=SqlFormatUtil.updateValidate(sqls, false);
+        if (dbResult.getCode() != 1000) {
+            list.add(dbResult.setSqlType(opType.name()));
+            return list;
+        }
         for (String sql : sqls) {
-            DbResult dbResult = analysisEngineService.updateAnalysisEngine("wz".equalsIgnoreCase(type) ? jdbcTemplate : sealJdbcTemplate, sql);
+            dbResult = analysisEngineService.updateAnalysisEngine(type,sql,userId);
             dbResult.setSqlType(opType.name());
             list.add(dbResult);
         }
         return list;
     }
+    /***
+     * 批量更新的引擎
+     * @param sqls
+     * @param type
+     * @param opType
+     * @param userId
+     * @return
+     */
+    public DbResult updateForPl(String[] sqls, String type, SqlType opType, String userId) {
+        DbResult dbResult =SqlFormatUtil.sqlValidate(sqls);
+        if(dbResult.getCode() != 1000)return dbResult.setSqlType(opType.name());
+        dbResult=SqlFormatUtil.updateValidate(sqls, true);
+        if (dbResult.getCode() != 1000) return dbResult.setSqlType(opType.name());
+        dbResult = analysisEngineService.updateForPLAnalysisEngine(type, sqls, userId, dbResult.getMsg());
+        dbResult.setSqlType(opType.name());
+        return dbResult;
+    }
 
     /***
-     * 批量更新查询引擎
+     * 批量更新前的查询引擎
      * 只返回一个结果页
      * @param sqls
      * @param type
-     * @param pageNumber
      * @return
      * @throws Exception
      */
-    public DbResultForPl updateListForSelect(String[] sqls, String type, int pageNumber, SqlType opType) {
-        DbResultForPl dbResultForPl=new DbResultForPl();
-        List<OldAndNewForPlVo> lists=new ArrayList<>();
-        for (int i = 0; i < pageNumber && i < sqls.length; i++) {
-            OldAndNewForPlVo vo=new OldAndNewForPlVo();
-            DbResult result = analysisEngineService.updateForSelectList("wz".equalsIgnoreCase(type) ? jdbcTemplate : sealJdbcTemplate, sqls[i], pageNumber, String.valueOf(i + 1));//用i作为key值
+    public DbResultForPl updateListForSelect(String[] sqls, String type, SqlType opType) {
+        DbResultForPl dbResultForPl = new DbResultForPl();
+        List<OldAndNewForPlVo> lists = new ArrayList<>();
+        for (int i = 0; i < sqls.length; i++) {
+            OldAndNewForPlVo vo = new OldAndNewForPlVo();
+            DbResult result = analysisEngineService.updateForSelectList(type, sqls[i]);
             vo.setCode(result.getCode());
             vo.setMsg(result.getMsg());
             vo.setMap(result.getMap());
-            vo.setSql(sqls[0]);
+            vo.setSql(sqls[i]);
+            vo.setTitle(result.getTitle());
             lists.add(vo);
         }
         dbResultForPl.setList(lists);
@@ -134,43 +153,28 @@ public class EngineService {
         return dbResultForPl;
     }
 
-    /**
-     * 日志引擎
-     *
-     * @param userId
-     * @param sql
-     * @param operType
-     * @param result
-     * @return
-     */
-    public DbResult logEngine(String userId, String sql, String operType, String result, String type) {
-        return new DbResult();
-    }
-
-    /**
-     * 下载引擎
-     *
-     * @param userId
-     * @param sql
-     * @param mail
-     * @return
-     */
-    public DbResult lowerEngine(String userId, String sql, String mail, String type) {
-        return new DbResult();
-    }
-
-    /****+
+    /****
      * 表操作
-     * @param sqls
+     * @param sql
      * @return
      */
-    public List<DbResult> alertAnalysisEngine(String[] sqls, String type, SqlType opType) {
-        List<DbResult> list = new ArrayList<>();
-        for (String sql : sqls) {
-            DbResult dbResult = analysisEngineService.alertAnalysisEngine("wz".equalsIgnoreCase(type) ? jdbcTemplate : sealJdbcTemplate, sql);
-            dbResult.setSqlType(opType.name());
-            list.add(dbResult);
-        }
-        return list;
+    public DbResult alert(String sql, String type, SqlType opType, String userId) {
+        DbResult dbResult=SqlFormatUtil.alertValidate(sql,type);
+        if (dbResult.getCode() != 1000) return dbResult.setSqlType(opType.name());
+        return analysisEngineService.alertAnalysisEngine(type, sql, userId).setSqlType(opType.name());
+    }
+
+    /**
+     * 插入操作
+     * @param sql
+     * @param type
+     * @param opType
+     * @param userId
+     * @return
+     */
+    public DbResult insert(String sql, String type, SqlType opType, String userId) {
+        DbResult dbResult=SqlFormatUtil.insertValidate(sql);
+        if (dbResult.getCode() != 1000) return dbResult.setSqlType(opType.name());
+        return  analysisEngineService.insertAnalysisEngine(type, sql, userId).setSqlType(opType.name());
     }
 }

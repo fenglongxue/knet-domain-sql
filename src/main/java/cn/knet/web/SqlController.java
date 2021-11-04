@@ -3,15 +3,16 @@ package cn.knet.web;
 import cn.knet.enums.SqlType;
 import cn.knet.service.EngineService;
 import cn.knet.vo.DbResult;
-import cn.knet.vo.DbResultForPl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -20,17 +21,24 @@ import java.util.List;
 public class SqlController extends SuperController{
     @Resource
     EngineService engineService;
-
+    private static final String SQLS = "sqls[]";
+    private static final String MSG = "参数不能为空!";
     /***
      * 运行操作：可能是更新、查询、表操作
      * @param type
      * @return
      * @throws Exception
      */
-    @RequestMapping("/exc")
+    @RequestMapping(value = "/exc",method =  {RequestMethod.GET,RequestMethod.POST})
     @ResponseBody
-    public List<DbResult> exc(HttpServletRequest request,String type, @RequestParam(value = "pageNumber",defaultValue ="50") int pageNumber){
-        return engineService.exc(request.getParameterValues("sqls[]"), type, pageNumber,getCurrentLoginUser(request).getId());
+    public List<DbResult> exc(HttpServletRequest request,String type, @RequestParam(value = "pageNumber",defaultValue ="1") int pageNumber){
+        List<DbResult> list = new ArrayList<>();
+        String[] sqls=request.getParameterValues(SQLS);
+        if (null == sqls || sqls.length <=0) {
+            list.add(DbResult.error(1002, MSG));
+            return list;
+        }
+        return engineService.exc(sqls, type, pageNumber,getCurrentLoginUser().getId());
     }
 
     /***
@@ -40,21 +48,30 @@ public class SqlController extends SuperController{
      * @return
      * @throws Exception
      */
-    @RequestMapping("/updateExc")
+    @RequestMapping(value = "/updateExc",method = {RequestMethod.GET,RequestMethod.POST})
     @ResponseBody
     public List<DbResult> updateExc(HttpServletRequest request, String type) {
-        return engineService.update(request.getParameterValues("sqls[]"), type, SqlType.UPDATE,getCurrentLoginUser(request).getId());
+        List<DbResult> list = new ArrayList<>();
+        String[] sqls=request.getParameterValues(SQLS);
+        if (null == sqls || sqls.length <=0) {
+            list.add(DbResult.error(1002, MSG));
+            return list;
+        }
+        return engineService.update(sqls, type, SqlType.UPDATE,getCurrentLoginUser().getId());
     }
-
     /***
-     * 批量更新前的查询
+     * 批量更新
+     * @param request
      * @param type
      * @return
-     * @throws Exception
      */
-    @RequestMapping("/updateListForSelect")
+    @RequestMapping(value = "/updateForPl",method = {RequestMethod.GET,RequestMethod.POST})
     @ResponseBody
-    public DbResultForPl updateListForSelect(HttpServletRequest request,String type) {
-        return engineService.updateListForSelect(request.getParameterValues("sqls[]"),type,SqlType.PIUPDATESELECT);
+    public DbResult updateForPl(HttpServletRequest request,String type) {
+        String[] sqls=request.getParameterValues(SQLS);
+        if (null == sqls || sqls.length <=0) {
+            return DbResult.error(1002, MSG);
+        }
+        return engineService.updateForPl(sqls,type,SqlType.PIUPDATESELECT,getCurrentLoginUser().getId());
     }
 }
