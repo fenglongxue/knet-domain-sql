@@ -69,27 +69,27 @@ private static final String COLUMN_NAME = "COLUMN_NAME";
      * @return
      */
     public static String getClumnsForUpdate(Update updateStatement, JdbcTemplate jdbcTemplate, String table){
-            StringBuilder clumns = new StringBuilder();
-            //获取主键
-            String pk = JdbcUtil.getPriKey(jdbcTemplate, table);
-            if (StringUtils.isNotBlank(pk)) {
-                clumns.append(pk + ",");
-                updateStatement.getColumns().forEach(x -> {
-                    if (!pk.toUpperCase().equalsIgnoreCase(x.getColumnName())) {
-                        clumns.append(x.getColumnName().toUpperCase() + ",");
-                    }
-                });
-            }
-            if (StringUtils.isBlank(pk)) {
-                updateStatement.getColumns().forEach(x -> clumns.append(x.getColumnName().toUpperCase() + ","));//变化的列名在最前面
-                @NotEmpty
-                List<Map<String, Object>> list =JdbcUtil.getAllClumns(jdbcTemplate, table);
-                if (!list.isEmpty())
-                    list.forEach(x -> updateStatement.getColumns().forEach(c -> clumns.append((!x.get(COLUMN_NAME).toString().equalsIgnoreCase(c.getColumnName())) ? x.get(COLUMN_NAME) + "," : "")));//未变化的列名在最后
-            }
-            if (clumns.toString().endsWith(",")) {
-                clumns.deleteCharAt(clumns.length() - 1);
-            }
-            return clumns.toString();
+        StringBuilder clumns = new StringBuilder();
+        //获取主键
+        String pk = JdbcUtil.getPriKey(jdbcTemplate, table);
+        if (StringUtils.isNotBlank(pk)) {
+            clumns.append(pk + ",");
+            updateStatement.getColumns().forEach(x -> {
+                if (!pk.toUpperCase().equalsIgnoreCase(x.getColumnName())) {
+                    clumns.append(x.getColumnName().toUpperCase() + ",");
+                }
+            });
+        }
+        if (StringUtils.isBlank(pk)) {
+            updateStatement.getColumns().forEach(x -> clumns.append(x.getColumnName().toUpperCase() + ","));//变化的列名在最前面
+            @NotEmpty
+            List<Map<String, Object>> list =JdbcUtil.getAllClumns(jdbcTemplate, table);
+            if (!list.isEmpty())
+                list.forEach(x -> updateStatement.getColumns().forEach(c -> clumns.append((!x.get(COLUMN_NAME).toString().equalsIgnoreCase(c.getColumnName())) ? x.get(COLUMN_NAME) + "," : "")));//未变化的列名在最后
+        }
+        if (clumns.toString().endsWith(",")) {
+            clumns.deleteCharAt(clumns.length() - 1);
+        }
+        return clumns.toString();
     }
 }

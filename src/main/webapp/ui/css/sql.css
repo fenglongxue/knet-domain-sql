@@ -1,7 +1,11 @@
 body {
     font: 12px Helvetica Neue, Helvetica, PingFang SC, Tahoma, Arial, sans-serif;
 }
-
+* {
+    box-sizing:border-box;
+    -moz-box-sizing:border-box; /* Firefox */
+    -webkit-box-sizing:border-box; /* Safari */
+}
 .layui-layout-admin .layui-header {
     background-color: #FFFFFF;
     height: 30px;
@@ -191,7 +195,7 @@ body {
 }
 .layui-right .layui-table td span {
     display: inline-block;
-    width: 100px;
+    width: 115px;
 }
 .export-btn {
     float: right;
@@ -201,34 +205,56 @@ body {
 .layui-layer.layui-layer-export .layui-layer-content{
     padding-bottom: 5px;
 }
+/*.sqlRightList .handle {*/
+/*    position: absolute;*/
+/*    left: 0;*/
+/*    top: 0;*/
+/*    display: none;*/
+/*    font-size: 12px;*/
+/*    z-index: 99;*/
+/*    text-align: center;*/
+/*}*/
+/*.sqlRightList .handle.light{*/
+/*    display: block;*/
+/*    height: 40px;*/
+/*    width: calc( 100% - 20px );*/
+/*    line-height: 40px;*/
+/*    background: rgba(0,0,0,.8);*/
+/*    color: #FFFFFF;*/
+/*    cursor: pointer;*/
+/*    animation: myfirst 0.05s;*/
+/*}*/
+
+.layui-side-scroll{
+    width: 100%;
+}
+.sqlRightList tr td {
+    position: relative;
+}
 .sqlRightList .deleteList {
     position: absolute;
-    left: 0;
+    right: 0;
     top: 0;
-    display: none;
-}
-.sqlRightList .deleteList.light{
-    display: block;
-    height: 40px;
-    width: 50px;
-    line-height: 40px;
-    background-image: linear-gradient(to right, #FF5722 0%, #ff6c3e 40%, transparent);
-    color: #FFFFFF;
-    font-size: 40px;
-    padding-left: 10px;
     cursor: pointer;
-    animation: myfirst 0.1s;
+    line-height: 30px;
 }
-.sqlRightList .deleteList.light i {
+.sqlRightList .deleteList i {
     display: block;
-    width: 40px;
-    height: 40px;
-    background: url("../images/delete.png") center left no-repeat;
-    background-size: 20px auto;
+    width: 25px;
+    height: 25px;
+    font-size: 18px;
+    text-align: center;
+}
+.sqlRightList td .right-user {
+    position: absolute;
+    right: 25px;
+    top: 6px;
+    height: 18px;
+    line-height: 18px;
 }
 @keyframes myfirst {
-    from { width: 0 }
-    to { width: 50px;}
+    from { height: 0 }
+    to { height: 100%;}
 }
 .layui-tab .layui-tab-item {
     height: 100%;
@@ -240,7 +266,6 @@ body {
 .layui-tab .layui-tab-item tr td {
     /*max-width: 200px;*/
 }
-
 .custom-drag-control {
     width: calc( 100% - 200px );
     height: 300px;

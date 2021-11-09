@@ -14,7 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -52,22 +52,27 @@ public class LogEngineService {
         jdbcTemplate.update(insertSql, logs.getId(),logs.getSql(),logs.getType(),logs.getOpType(),logs.getUserId(),logs.getSqlResu());
         result.setCode(1000);
         result.setMsg("插入成功");
-        if(details.isEmpty()){
+        if(!details.isEmpty()){
             String detailsSql = "INSERT INTO KNET_SQL_LOG_DETAIL (ID,LOG_ID,NOW,OLD)  VALUES (?,?,?,?)";
-            jdbcTemplate.batchUpdate(detailsSql, new BatchPreparedStatementSetter() {
-                @Override
-                public void setValues(PreparedStatement ps, int i) throws SQLException {
-                    ps.setString(1, UUIDGenerator.getUUID());
-                    ps.setString(2, logs.getId());
-                    ps.setString(3, details.get(i).getNow());
-                    ps.setString(4, details.get(i).getOld());
-                }
-                @Override
-                public int getBatchSize() {
-                    return details.size();
-                }
-            });
-            log.info("日志详情共：{}条",details.size());
+            try {
+                jdbcTemplate.batchUpdate(detailsSql, new BatchPreparedStatementSetter() {
+                    @Override
+                    public void setValues(PreparedStatement ps, int i) throws SQLException {
+                        ps.setString(1, UUIDGenerator.getUUID());
+                        ps.setString(2, logs.getId());
+                        ps.setString(3, details.get(i).getNow());
+                        ps.setString(4, details.get(i).getOld());
+                    }
+                    @Override
+                    public int getBatchSize() {
+                        return details.size();
+                    }
+                });
+                log.info("日志详情共：{}条",details.size());
+            } catch (DataAccessException e) {
+                jdbcTemplate.update(detailsSql,UUIDGenerator.getUUID(),logs.getId(),"因为次sql涉及长字段不给予存储","因为次sql涉及长字段不给予存储");
+                e.printStackTrace();
+            }
         }
 
         return  result;
@@ -94,7 +99,11 @@ public class LogEngineService {
     public DbResult logShare(KnetSqlShare share) {
         String insertSql = "INSERT INTO KNET_SQL_SHARE (ID,SQL,STOR_TYPE,TITLE,USER_ID,type) VALUES (?,?,?,?,?,?)";
         log.info("sql保存数据为：{}",share);
-        jdbcTemplate.update(insertSql, UUIDGenerator.getUUID(),share.getSql(),share.getStorType(),share.getTitle(),share.getUserId(),share.getType());
+        try {
+            jdbcTemplate.update(insertSql, UUIDGenerator.getUUID(),share.getSql(),share.getStorType(),share.getTitle(),share.getUserId(),share.getType());
+        } catch (DataAccessException e) {
+            return  new DbResult(1000,"sql保存失败："+e.toString());
+        }
         return  new DbResult(1000,"保存成功");
     }
     /**
@@ -104,12 +113,18 @@ public class LogEngineService {
      */
     public DbResult logList(String storType,String type,String userId,String title,int pageNumber) {
         DbResult result = new DbResult();
-        StringBuilder listSql =  new StringBuilder("select l.id,sql,title,stor_type,u.name from KNET_SQL_SHARE l left join KNET_USER u on l.USER_ID=U.ID  where (l.user_id=? or l.stor_type='SHARE' )");
+        StringBuilder listSql =  new StringBuilder("select l.id,sql,title,stor_type,u.name from KNET_SQL_SHARE l , KNET_USER u where l.USER_ID=U.ID  ");
+        if(StringUtils.isNotBlank(storType)){
+            if("SAVE".equals(storType)){
+                listSql.append("and  l.user_id=?  and stor_Type = 'SAVE'");
+            }else{
+                listSql.append("and  l.user_id!=?  and stor_Type = 'SHARE'");
+            }
+        }else {
+            listSql.append(" and (l.user_id=? or l.stor_type='SHARE' )");
+        }
         if(StringUtils.isNotBlank(title)){
             listSql.append(" and title like '%"+title+"%'");
-        }
-        if(StringUtils.isNotBlank(storType)){
-            listSql.append(" and stor_Type = '"+storType+"'");
         }
         if(StringUtils.isNotBlank(type)){
             listSql.append(" and type = '"+type+"'");
@@ -182,7 +197,7 @@ public class LogEngineService {
         String url = this.updateFile(os, sqllog);
         sqllog.setDownloadUrl(url);
         //邮件发送
-        this.sendMail(os,sqllog);
+        this.sendMail(sqllog);
         long sendendTime=System.currentTimeMillis(); //获取结束时间
         log.info("文件生成程序运行时间： {}s",(sendendTime-excendTime));
         log.info("总执行时间： {}s",(sendendTime-startTime));
@@ -206,19 +221,12 @@ public class LogEngineService {
         }
         return "";
     }
-    private DbResult sendMail(ByteArrayOutputStream os,KnetSqlDownload sqllog){
-        ByteArrayResource byteArrayResource = new ByteArrayResource(os.toByteArray()){
-            @Override
-            public String getFilename() {
-                return sqllog.getTitle() +".xlsx";
-            }
-        };
+    private DbResult sendMail(KnetSqlDownload sqllog){
         MapBuilder map = MapBuilder.build("subject",sqllog.getTitle())
                 .ad("to",sqllog.getEmail())
-                .ad("content","文件下载地址："+sqllog.getDownloadUrl())
-                .ad("file", byteArrayResource);
+                .ad("content","文件下载地址："+sqllog.getDownloadUrl());
         try {
-            Map<String, Object> results= restTemplate.postForObject("http://knet-cloud-mail/mail/send/file",map,Map.class);
+            Map<String, Object> results= restTemplate.postForObject("http://knet-cloud-mail/mail/send",map,Map.class);
             if (results!=null&&!"1000".equals(results.get("code").toString())) {
                 return new DbResult(1002,"发送邮件中台异常");
             }

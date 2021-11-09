@@ -50,6 +50,10 @@ public class KnetSqlShare implements Serializable {
      */
     @TableField("CREATE_DATE")
     private Date createDate;
-
+    /**
+     * 是否分享Y|N
+     */
+    @TableField("IS_SHARE")
+    private String isShare;
 
 }

@@ -67,11 +67,13 @@ public class SqlController extends SuperController{
      */
     @RequestMapping(value = "/updateForPl",method = {RequestMethod.GET,RequestMethod.POST})
     @ResponseBody
-    public DbResult updateForPl(HttpServletRequest request,String type) {
+    public List<DbResult> updateForPl(HttpServletRequest request,String type) {
+        List<DbResult> list = new ArrayList<>();
         String[] sqls=request.getParameterValues(SQLS);
         if (null == sqls || sqls.length <=0) {
-            return DbResult.error(1002, MSG);
+            list.add(DbResult.error(1002, MSG));
+            return list;
         }
-        return engineService.updateForPl(sqls,type,SqlType.PIUPDATESELECT,getCurrentLoginUser().getId());
+        return engineService.updateForPl(sqls,type,getCurrentLoginUser().getId());
     }
 }

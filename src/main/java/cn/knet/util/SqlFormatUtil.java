@@ -100,30 +100,22 @@ private static final String CZLXMSG = "目前的操作类型是";
     }
     /***
      * 更新操作的校验
-     * @param sqls
-     * @param isPL
+     * @param sql
      * @return
      */
-    public static DbResult updateValidate(String[] sqls,Boolean isPL){
+    public static DbResult updateValidate(String sql){
         String table = null;
-        for (String sql:sqls) {
             log.info("更新执行的sql:{}", sql);
             try {
                 SqlType sqlType= SqlParserTool.getSqlType(sql);
                 if(!sqlType.equals(SqlType.UPDATE)) return DbResult.error(1002, "更新校验出错:"+sql+CZLXMSG+sqlType+",不是更新数据类型，不支持！",sql);
                 DbResult dbResult=commonVaildate(sql);
                 if(null==dbResult||dbResult.getCode()!=1000) return DbResult.error(1002, "更新校验出错",sql);
-                if(Boolean.TRUE.equals(isPL)){
-                    table= StringUtils.isBlank(table)?dbResult.getMsg():table;//目前只支持单表
-                    if(!table.equals(dbResult.getMsg())) return DbResult.error(1002, "更新校验出错:目前批量更新只支持同一张表的操作！",sql);
-                }else{
-                    table=dbResult.getMsg();
-                }
+                table=dbResult.getMsg();
             } catch (JSQLParserException e) {
                 log.error("更新校验出错:校验出错{}", SqlParserTool.getSqlEcception(e));
                 return DbResult.error(1002,"更新校验出错:"+SqlParserTool.getSqlEcception(e), sql);
             }
-        }
         return DbResult.success(1000,table);
     }
 
@@ -194,5 +186,26 @@ private static final String CZLXMSG = "目前的操作类型是";
             return DbResult.error(1002,SqlParserTool.getSqlEcception(e));
         }
         return DbResult.success(1000,"查询操作校验通过！");
+    }
+
+    /***
+     * 删除操作
+     * @param sql
+     * @return
+     */
+    public static DbResult deleteValidate(String sql) {
+        try {
+            log.info("删除执行的sql{}", sql);
+            SqlType sqlType=SqlParserTool.getSqlType(sql);
+            if(!sqlType.equals(SqlType.DELETE)){
+                return DbResult.error(1002, sql+CZLXMSG+sqlType+",不是删除类型，不支持！",sql);
+            }
+            DbResult dbResult=commonVaildate(sql);
+            if(null==dbResult||dbResult.getCode()!=1000) return DbResult.error(1002, "删除操作校验出错",sql);
+        } catch (Exception e) {
+            log.error("删除操作校验出错{}", SqlParserTool.getSqlEcception(e));
+            return DbResult.error(1002,SqlParserTool.getSqlEcception(e),sql);
+        }
+        return DbResult.success(1000,"删除操作校验通过！");
     }
 }

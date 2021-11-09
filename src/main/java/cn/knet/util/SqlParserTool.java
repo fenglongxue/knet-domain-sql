@@ -8,6 +8,7 @@ import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.alter.Alter;
 import net.sf.jsqlparser.statement.comment.Comment;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
+import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.drop.Drop;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.*;
@@ -49,7 +50,9 @@ public class SqlParserTool {
             return SqlType.SELECT;
         } else if (sqlStmt instanceof Update) {
             return SqlType.UPDATE;
-        }else if (sqlStmt instanceof Comment) {
+        }else if (sqlStmt instanceof Delete) {
+            return SqlType.DELETE;
+        } else if (sqlStmt instanceof Comment) {
             return SqlType.COMMENT;
         } else {
             return SqlType.NONE;
@@ -97,6 +100,11 @@ public class SqlParserTool {
         if (statement instanceof Update) {
             Update update= (Update) statement;
             tableList.add(update.getTable().getName());
+            return tableList;
+        }
+        if (statement instanceof Delete) {
+            Delete delete= (Delete) statement;
+            tableList.add(delete.getTable().getName());
             return tableList;
         }
         TablesNamesFinder tablesNamesFinder = new TablesNamesFinder();

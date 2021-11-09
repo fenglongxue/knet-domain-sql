@@ -22,7 +22,7 @@ public class logController extends SuperController {
     @RequestMapping("/list")
     @ResponseBody
     public DbResult logList(HttpServletRequest request, String storType,String sqls, String type,String title,int pageNumber){
-        return logEngineService.logList(storType,type,this.getCurrentLoginUser().getId(),title,pageNumber);
+                                          return logEngineService.logList(storType,type,this.getCurrentLoginUser().getId(),title,pageNumber);
     }
 
     @RequestMapping("/sava")

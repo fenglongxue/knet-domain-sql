@@ -163,7 +163,7 @@ drop table KNET_SQL_TEST</textarea>
                     <input type="text" id="storTypeInp" placeholder="输入关键字查询">
                 </div>
             </div>
-            <table class="layui-table sqlRightList" id="sqlRightList">
+            <table class="layui-table sqlRightList" id="sqlRightList" lay-size="sm">
 <%--                <tr>--%>
 <%--                    <td>--%>
 <%--                        <span>查询未实名数据</span>--%>

@@ -49,6 +49,8 @@ public class EngineService {
                         list.add(updateForSelect(sql, type, SqlType.UPDATESELECT));
                     } else if (opType.equals(SqlType.INSERT)) {
                         list.add(insert(sql, type, opType, userId));
+                    } else if (opType.equals(SqlType.DELETE)) {
+                        list.add(delete(sql, type, opType, userId));
                     } else if (opType.equals(SqlType.COMMENT) ||opType.equals(SqlType.ALTER) || opType.equals(SqlType.CREATETABLE) || opType.equals(SqlType.DROP)) {
                         list.add(alert(sql, type, opType, userId));
                     } else {
@@ -83,7 +85,7 @@ public class EngineService {
      * @throws Exception
      */
     public DbResult updateForSelect(String sql, String type, SqlType opType) {
-        DbResult dbResult = SqlFormatUtil.updateValidate(new String[]{sql}, false);
+        DbResult dbResult = SqlFormatUtil.updateValidate(sql);
         if (dbResult.getCode() != 1000) return dbResult.setSqlType(opType.name());
         dbResult=analysisEngineService.updateForSelect(type, sql,100);
         //只取前100条展示
@@ -97,15 +99,14 @@ public class EngineService {
      */
     public List<DbResult> update(String[] sqls,String type,SqlType opType,String userId) {
         List<DbResult> list = new ArrayList<>();
-        DbResult dbResult=SqlFormatUtil.updateValidate(sqls, false);
-        if (dbResult.getCode() != 1000) {
-            list.add(dbResult.setSqlType(opType.name()));
-            return list;
-        }
         for (String sql : sqls) {
-            dbResult = analysisEngineService.updateAnalysisEngine(type,sql,userId);
+            DbResult dbResult=SqlFormatUtil.updateValidate(sql);
             dbResult.setSqlType(opType.name());
-            list.add(dbResult);
+            if (dbResult.getCode() != 1000) {
+                list.add(dbResult);
+            }else{
+                list.add(analysisEngineService.updateAnalysisEngine(type,sql,userId));
+            }
         }
         return list;
     }
@@ -113,18 +114,11 @@ public class EngineService {
      * 批量更新的引擎
      * @param sqls
      * @param type
-     * @param opType
      * @param userId
      * @return
      */
-    public DbResult updateForPl(String[] sqls, String type, SqlType opType, String userId) {
-        DbResult dbResult =SqlFormatUtil.sqlValidate(sqls);
-        if(dbResult.getCode() != 1000)return dbResult.setSqlType(opType.name());
-        dbResult=SqlFormatUtil.updateValidate(sqls, true);
-        if (dbResult.getCode() != 1000) return dbResult.setSqlType(opType.name());
-        dbResult = analysisEngineService.updateForPLAnalysisEngine(type, sqls, userId, dbResult.getMsg());
-        dbResult.setSqlType(opType.name());
-        return dbResult;
+    public List<DbResult> updateForPl(String[] sqls, String type,String userId) {
+        return analysisEngineService.updateForPLAnalysisEngine(type,sqls,userId);
     }
 
     /***
@@ -176,5 +170,19 @@ public class EngineService {
         DbResult dbResult=SqlFormatUtil.insertValidate(sql);
         if (dbResult.getCode() != 1000) return dbResult.setSqlType(opType.name());
         return  analysisEngineService.insertAnalysisEngine(type, sql, userId).setSqlType(opType.name());
+    }
+
+    /***
+     * 删除操作
+     * @param sql
+     * @param type
+     * @param opType
+     * @param userId
+     * @return
+     */
+    public DbResult delete(String sql, String type, SqlType opType, String userId) {
+        DbResult dbResult=SqlFormatUtil.deleteValidate(sql);
+        if (dbResult.getCode() != 1000) return dbResult.setSqlType(opType.name());
+        return  analysisEngineService.deleteAnalysisEngine(type, sql, userId).setSqlType(opType.name());
     }
 }

@@ -4,6 +4,7 @@ import cn.knet.vo.KnetUser;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.Subject;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -64,6 +65,7 @@ public class IndexController extends  SuperController {
     }
 
     @RequestMapping(value = "/logout")
+    @CacheEvict(value = {"authenticationCache", "authorizationCache"}, allEntries = true, beforeInvocation = true)
     public String logout() {
         Subject subject = SecurityUtils.getSubject();
         if (subject.isAuthenticated()) {

@@ -1,6 +1,6 @@
 var $ = layui.jquery;
 var form = layui.form;
-var pageNumber = 50;
+var pageNumber = 1;
 var editor;
 var pageNumberRight = 1;
 window.onload = function () {
@@ -42,6 +42,8 @@ var sqlInit = {
 
         sqlInit.sqlTypeInput = sqlType;
         sqlInit.tabTitle= [];
+
+        pageNumber = 1;
         $('#result').html('');
 
         $.post( sqlexc, {sqls:sqlArr, type: sqlType, pageNumber: pageNumber }, function (data) {
@@ -72,7 +74,7 @@ var sqlInit = {
         sqlInit.sqlTypeInput = sqlType;
         sqlInit.tabTitle= [];
 
-        $.post( updateListForSelect, {sqls:sqlArr, type: sqlType, pageNumber: pageNumber }, function (data) {
+        $.post( updateListForSelect, {sqls:sqlArr, type: sqlType }, function (data) {
             sqlInit.getbatchUpdate(data);
         })
     },
@@ -86,7 +88,7 @@ var sqlInit = {
             } else if( type == 'UPDATESELECT' ){
                 html +="<li class='title"+i+" "+cls+"' onmouseenter=sqlInit.alertTips("+i+",'title"+i+"') onmouseleave=sqlInit.closeLayer()>更新</li>";
             } else if ( type == 'batchUpdate' ){
-                html +="<li class='title"+i+" "+cls+"' onmouseenter=sqlInit.alertTips("+i+",'title"+i+"') onmouseleave=sqlInit.closeLayer()>批量更新</li>";
+                html +="<li class='title"+i+" "+cls+"' >批量更新</li>";
             } else if( type == 'ALTER' || type == 'CREATETABLE' || type == 'DROP' || type == 'COMMENT' ){
                 html +="<li class='title"+i+" "+cls+"' onmouseenter=sqlInit.alertTips("+i+",'title"+i+"') onmouseleave=sqlInit.closeLayer()>表操作</li>";
             } else if ( type == 'INSERT' ){
@@ -119,8 +121,8 @@ var sqlInit = {
             thtml+='<div class="sql-title">';
             thtml+='<span class="sql-tip">'+dvalue.msg+'</span>';
             thtml+='     <div class="layui-btn-group">';
-            thtml+='         <button type="button" class="layui-btn layui-btn-primary layui-btn-xs"><i class="layui-icon"> &#xe625;</i>更多</button>';
-            thtml+='         <button type="button" class="layui-btn layui-btn-primary layui-btn-xs"><i class="layui-icon"> &#xe669;</i>刷新</button>';
+            thtml+='         <button type="button" class="layui-btn layui-btn-primary layui-btn-xs" id="moreSelect" data-id="table'+(dindex+1)+'" data-sql="'+dvalue.sql+'"><i class="layui-icon"> &#xe625;</i>更多</button>';
+            thtml+='         <button type="button" class="layui-btn layui-btn-primary layui-btn-xs" id="refreshSelect" data-id="table'+(dindex+1)+'" data-sql="'+dvalue.sql+'"><i class="layui-icon"> &#xe669;</i>刷新</button>';
             thtml+='         <button type="button" class="layui-btn layui-btn-primary layui-btn-xs" onclick=sqlInit.logCollection('+dindex+',"SAVE")><i class="layui-icon"> &#xe658;</i>收藏sql</button>';
             thtml+='         <button type="button" class="layui-btn layui-btn-primary layui-btn-xs" onclick=sqlInit.logCollection('+dindex+',"SHARE")><i class="layui-icon"> &#xe641;</i>分享sql</button>';
             thtml+='         <button type="button" class="layui-btn layui-btn-primary layui-btn-xs" onclick=sqlInit.logExport('+dindex+')><i class="layui-icon"> &#xe67d;</i>导出</button>';
@@ -129,14 +131,12 @@ var sqlInit = {
 
             //取出键值
             var thisTitle = [];
-            $.each(dvalue.title,function (rindex,rvalue){
-                thisTitle.push( rvalue );
-            })
 
-            thtml += '<div class="layui-table-frame"><table class="layui-table" id="table1">';
+            thtml += '<div class="layui-table-frame"><table class="layui-table" id="table'+(dindex+1)+'">';
             //循环表头
             thtml += '<tr>';
             $.each(dvalue.title,function (i,v){
+                thisTitle.push( v );
                 thtml +='<th>'+v+'</th>'
             })
             thtml+='</tr>';
@@ -160,6 +160,13 @@ var sqlInit = {
         $('#result').append(thtml);
         //导航
         sqlInit.getTitle(sqlInit.tabTitle);
+
+        $('#moreSelect').on('click',function (){
+            sqlInit.moreSelect($(this),'more');
+        })
+        $('#refreshSelect').on('click',function (){
+            sqlInit.moreSelect($(this),'refresh');
+        })
     },
     getupdateData: function (dvalue,dindex){
         sqlInit.tabTitle.push( { sql:dvalue.sql, title: dvalue.sqlType } );
@@ -308,18 +315,47 @@ var sqlInit = {
             }
         })
     },
+    //更多
+    moreSelect:function (that,type){
+        if( type == 'more' ){
+            pageNumber++;
+        } else {
+            pageNumber=1;
+        }
+        $.post( sqlexc, {sqls:[that.attr('data-sql')], type: sqlInit.sqlTypeInput, pageNumber: pageNumber }, function (data) {
+            var thtml = '';
+            $.each(data[0].data,function (dindex,dvalue){
+                thtml += '<tr>';
+                $.each(dvalue,function (tindex,tvalue){
+                    $.each(data[0].title,function (i,v){
+                        if( tindex == v ){
+                            thtml +='<td><div class="layui-table-cell">'+tvalue+'</div></td>'
+                        }
+                    })
+                })
+                thtml+='</tr>';
+            })
+            var thisid = that.attr('data-id');
+
+            if( type == 'more' ){
+                $('#'+thisid).append(thtml);
+            } else {
+                $('#'+thisid).html(thtml);
+            }
+        })
+    },
     //右侧列表
     getlogList: function (storType,storTit,ismore){
         $.post( loglist, {pageNumber: pageNumberRight,storType:storType ,title:storTit,type:'wz'}, function (data) {
             if( data.code == 1000 ){
                 var html = '';
                 $.each(data.data,function (i,v){
-                    html +='<tr><td><div class="deleteList" onclick=sqlInit.deleteList("'+v.ID+'")><i></i></div><span>'+v.TITLE+'</span>';
+                    html +='<tr><td><span id="edit" data-sql="'+v.SQL+'">'+v.TITLE+'</span>';
                     // 类型为分享（SHARE）时，显示名字
                     if( v.STOR_TYPE.toUpperCase() == 'SHARE' ){
-                        html+='<button class="layui-btn layui-badge layui-bg-red">'+v.NAME+'</button>'
+                        html+='<button class="layui-btn layui-btn-xs layui-bg-red right-user">'+v.NAME+'</button>'
                     }
-                    html+='</td></tr>';
+                    html+='<div class="deleteList" onclick=sqlInit.deleteList("'+v.ID+'")><i class="layui-icon layui-icon-delete"></i></div></td></tr>';
                 })
                 if( ismore ){
                     $('#sqlRightList').append(html);
@@ -328,11 +364,18 @@ var sqlInit = {
                 }
 
                 $('#sqlRightList tr td').hover(function (){
-                    $(this).find('.deleteList').addClass('light');
+                    $(this).find('.handle').addClass('light');
                 },function (){
-                    $(this).find('.deleteList').removeClass('light');
+                    $(this).find('.handle').removeClass('light');
                 })
                 data.data.length < 50 ? $('#morelist').hide() : $('#morelist').show();
+
+                $('#edit').on('click',function (){
+                    let vals = $(this).attr('data-sql');
+                    // $('#code').val(vals);
+                    editor.getDoc().setValue(vals);
+                })
+
             }
         })
     },
