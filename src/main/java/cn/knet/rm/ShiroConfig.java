@@ -1,6 +1,5 @@
 package cn.knet.rm;
 
-import cn.knet.filter.SqlFilter;
 import net.sf.ehcache.CacheManager;
 import org.apache.shiro.cache.ehcache.EhCacheManager;
 import org.apache.shiro.mgt.SecurityManager;
@@ -16,7 +15,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 
-import javax.servlet.Filter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -37,8 +35,6 @@ public  class ShiroConfig {
         shiroFilterFactoryBean.setSuccessUrl("/index");
         shiroFilterFactoryBean.setUnauthorizedUrl("/unauth");
         shiroFilterFactoryBean.setLoginUrl("/login");
-         Map<String, Filter> filters = shiroFilterFactoryBean.getFilters();
-        filters.put("sqlFilter", new SqlFilter());
         return shiroFilterFactoryBean;
     }
 

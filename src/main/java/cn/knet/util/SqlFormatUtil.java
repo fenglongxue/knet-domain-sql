@@ -22,6 +22,7 @@ import java.util.List;
 @Slf4j
 public class SqlFormatUtil {
 private static final String CZLXMSG = "目前的操作类型是";
+
     private SqlFormatUtil() {
     }
     /***
@@ -62,47 +63,53 @@ private static final String CZLXMSG = "目前的操作类型是";
         }
         return DbResult.error(1002, "格式错误，无匹配的操作类型！",sql);
     }
-
     /***
-     * sql校验-包括sql语法和sql的类型
-     * @param sqls
+     * sql校验
+     * 格式  类型 表名等
+     * @param sql
+     * @param type
      * @return
      */
-    public static DbResult sqlValidate(String[] sqls) {
-        for (String sql:sqls) {
-            DbResult result=sqlValidate(sql);
-            if(null!=result&&result.getCode()!=1000){
-                return DbResult.error(1002,sql+"格式错误:"+result.getMsg(),sql);
+    public static DbResult sqlVaildate(String sql,String type){
+        try {
+            DbResult result = SqlFormatUtil.sqlTypeFormat(sql);
+            if (null == result || result.getCode() != 1000) {
+                return DbResult.error(1002, "sql校验出错！" + result.getMsg(), sql);
             }
-        }
-        return DbResult.success();
+            result = SqlFormatUtil.sqlFormat(sql);
+            if (null == result || result.getCode() != 1000) {
+                return DbResult.error(1002, "sql校验出错！" + result.getMsg(), sql);
+            }
+            Statement statement = SqlParserTool.getStatement(sql);
+            if (null == statement) {
+                return DbResult.error(1002, "sql格式有问题！", sql);
+            }
+            List<String> tables = SqlParserTool.getTableList(statement);
+            if (tables.isEmpty()) {
+                return DbResult.error(1002, "表名获取失败！", sql);
+            }
+            if (tables.size() > 1) {
+                return DbResult.error(1002, "目前只支持单表操作！", sql);
+            }
+            SqlType sqlType = SqlParserTool.getSqlType(sql);
+            if (sqlType.equals(SqlType.DROP)) {
+                int count = SpringTools.getJdbcTemplate(type).queryForObject("SELECT count(*) FROM " + tables.get(0).toUpperCase(), int.class);
+                if (count > 0) {
+                    log.error("表操作校验出错：数据表" + tables.get(0).toUpperCase() + "中有数据，无法执行此操作！");
+                    return DbResult.error(1002, "表操作校验出错：数据表" + tables.get(0).toUpperCase() + "中有" + count + "条数据，无法执行此操作！", sql);
+                }
+            }
+            return DbResult.success(1000, tables.get(0).toUpperCase());
+        } catch (Exception e) {
+        log.error("校验出错:校验出错{}", SqlParserTool.getSqlEcception(e));
+        return DbResult.error(1002,"校验出错:"+SqlParserTool.getSqlEcception(e), sql);
     }
-    public static DbResult sqlValidate(String sql) {
-        DbResult result=SqlFormatUtil.sqlTypeFormat(sql);
-        if(null!=result&&result.getCode()==1000)
-            result=SqlFormatUtil.sqlFormat(sql);
-        return result;
     }
-    @SneakyThrows
-    public static DbResult commonVaildate(String sql){
-        Statement statement=SqlParserTool.getStatement(sql);
-        if(null==statement){
-            return DbResult.error(1002, "sql格式有问题！",sql);
-        }
-        List<String> tables=SqlParserTool.getTableList(statement);
-        if(tables.isEmpty()){
-            return DbResult.error(1002, "表名获取失败！",sql);
-        }
-        if(tables.size()>1){
-            return DbResult.error(1002, "目前只支持单表操作！",sql);
-        }
-        return DbResult.success(1000,tables.get(0));
-    }
-    /***
+    /*  /***
      * 更新操作的校验
      * @param sql
      * @return
-     */
+     *//*
     public static DbResult updateValidate(String sql){
         String table = null;
             log.info("更新执行的sql:{}", sql);
@@ -117,14 +124,14 @@ private static final String CZLXMSG = "目前的操作类型是";
                 return DbResult.error(1002,"更新校验出错:"+SqlParserTool.getSqlEcception(e), sql);
             }
         return DbResult.success(1000,table);
-    }
+    }*/
 
-    /***
+   /***
      * 表操作的校验
      * @param sql
      * @param type
      * @return
-     */
+     *//*
     public static DbResult alertValidate(String sql,String type) {
                 log.info("表操作执行的sql:{}", sql);
                 try {
@@ -149,11 +156,11 @@ private static final String CZLXMSG = "目前的操作类型是";
         return DbResult.success(1000,"表操作校验通过！");
     }
 
-    /***
+    *//***
      * 插入操作的校验
      * @param sql
      * @return
-     */
+     *//*
     public static DbResult insertValidate(String sql) {
         try {
             log.info("插入执行的sql{}", sql);
@@ -170,11 +177,11 @@ private static final String CZLXMSG = "目前的操作类型是";
         return DbResult.success(1000,"插入操作校验通过！");
     }
 
-    /***
+    *//***
      * 查询操作校验
      * @param sql
      * @return
-     */
+     *//*
     public static DbResult queryValidate(String sql) {
         try{
             SqlType sqlType = SqlParserTool.getSqlType(sql);
@@ -188,11 +195,11 @@ private static final String CZLXMSG = "目前的操作类型是";
         return DbResult.success(1000,"查询操作校验通过！");
     }
 
-    /***
+    *//***
      * 删除操作
      * @param sql
      * @return
-     */
+     *//*
     public static DbResult deleteValidate(String sql) {
         try {
             log.info("删除执行的sql{}", sql);
@@ -207,5 +214,5 @@ private static final String CZLXMSG = "目前的操作类型是";
             return DbResult.error(1002,SqlParserTool.getSqlEcception(e),sql);
         }
         return DbResult.success(1000,"删除操作校验通过！");
-    }
+    }*/
 }

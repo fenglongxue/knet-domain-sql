@@ -1,9 +1,14 @@
 package cn.knet.web;
 
 import cn.knet.enums.SqlType;
-import cn.knet.service.EngineService;
+import cn.knet.service.ExcService;
+import cn.knet.service.PlUpdateService;
+import cn.knet.service.UpdateService;
+import cn.knet.util.SqlFormatUtil;
+import cn.knet.util.SqlParserTool;
 import cn.knet.vo.DbResult;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jsqlparser.JSQLParserException;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -20,7 +25,11 @@ import java.util.List;
 @Slf4j
 public class SqlController extends SuperController{
     @Resource
-    EngineService engineService;
+    ExcService excService;
+    @Resource
+    PlUpdateService plUpdateService;
+    @Resource
+    UpdateService updateService;
     private static final String SQLS = "sqls[]";
     private static final String MSG = "参数不能为空!";
     /***
@@ -38,7 +47,16 @@ public class SqlController extends SuperController{
             list.add(DbResult.error(1002, MSG));
             return list;
         }
-        return engineService.exc(sqls, type, pageNumber,getCurrentLoginUser().getId());
+        for (String  sql:sqls) {
+                //先校验语法和格式等
+                DbResult dbResult= SqlFormatUtil.sqlVaildate(sql,type);
+                if(dbResult.getCode()!=1000) {
+                    list.add(dbResult);
+                }else{
+                    list.add(excService.exc(sql, type, pageNumber,getCurrentLoginUser().getId()));
+                }
+        }
+    return list;
     }
 
     /***
@@ -57,7 +75,27 @@ public class SqlController extends SuperController{
             list.add(DbResult.error(1002, MSG));
             return list;
         }
-        return engineService.update(sqls, type, SqlType.UPDATE,getCurrentLoginUser().getId());
+        for (String sql : sqls) {
+            DbResult dbResult=SqlFormatUtil.sqlVaildate(sql,type);
+            dbResult.setSqlType(SqlType.UPDATE.name());
+            dbResult.setSql(sql);
+            if (dbResult.getCode() == 1000) {
+                SqlType opType = null;
+                try {
+                    opType = SqlParserTool.getSqlType(sql);
+                    if(opType.name().equalsIgnoreCase(SqlType.UPDATE.name())){
+                        list.add(updateService.update(sql, type,getCurrentLoginUser().getId()));
+                    }else{
+                        list.add(dbResult);
+                    }
+                } catch (JSQLParserException e) {
+                    list.add(dbResult.setCode(1002).setMsg(SqlParserTool.getSqlEcception(e)));
+                }
+            }else{
+                list.add(dbResult);
+            }
+        }
+        return list;
     }
     /***
      * 批量更新
@@ -74,6 +112,7 @@ public class SqlController extends SuperController{
             list.add(DbResult.error(1002, MSG));
             return list;
         }
-        return engineService.updateForPl(sqls,type,getCurrentLoginUser().getId());
+
+        return plUpdateService.updateForPLAnalysisEngine(type,sqls,getCurrentLoginUser().getId());
     }
 }

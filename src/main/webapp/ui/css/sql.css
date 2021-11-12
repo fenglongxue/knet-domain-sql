@@ -133,6 +133,12 @@ body {
 .sql-p10 {
     padding: 10px 10px;
 }
+.sql-p10 p {
+    padding-bottom: 3px;
+}
+.sql-p10 p span{
+    color: #8D8D8D;
+}
 
 .sql-tip {
     padding: 10px 10px;
@@ -196,6 +202,7 @@ body {
 .layui-right .layui-table td span {
     display: inline-block;
     width: 115px;
+    cursor: pointer;
 }
 .export-btn {
     float: right;
@@ -205,31 +212,13 @@ body {
 .layui-layer.layui-layer-export .layui-layer-content{
     padding-bottom: 5px;
 }
-/*.sqlRightList .handle {*/
-/*    position: absolute;*/
-/*    left: 0;*/
-/*    top: 0;*/
-/*    display: none;*/
-/*    font-size: 12px;*/
-/*    z-index: 99;*/
-/*    text-align: center;*/
-/*}*/
-/*.sqlRightList .handle.light{*/
-/*    display: block;*/
-/*    height: 40px;*/
-/*    width: calc( 100% - 20px );*/
-/*    line-height: 40px;*/
-/*    background: rgba(0,0,0,.8);*/
-/*    color: #FFFFFF;*/
-/*    cursor: pointer;*/
-/*    animation: myfirst 0.05s;*/
-/*}*/
 
 .layui-side-scroll{
     width: 100%;
 }
 .sqlRightList tr td {
     position: relative;
+    border-left: none;
 }
 .sqlRightList .deleteList {
     position: absolute;
@@ -251,10 +240,6 @@ body {
     top: 6px;
     height: 18px;
     line-height: 18px;
-}
-@keyframes myfirst {
-    from { height: 0 }
-    to { height: 100%;}
 }
 .layui-tab .layui-tab-item {
     height: 100%;
@@ -291,4 +276,7 @@ body {
     cursor: n-resize;
     border-top: 1px solid #ddd;
     background: #fafafa;
+}
+.select-table-frame {
+    position: relative;
 }

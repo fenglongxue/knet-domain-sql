@@ -56,7 +56,7 @@
     <div class="layui-body">
         <!-- 内容主体区域 -->
         <div>
-            <textarea id="code">update KNET_TEST  t  set t.name='科技有限责任公司董事1' where t.profile_id= 'a820ade7184440d18c254ce18b271d5a';
+            <textarea id="code">update KNET_TEST  t  set t.name='科技有限责任公司董事1' where t.profile_id= '6f49429c34a543b1bdec8a052171580b';
 select * from knet_sql_log;
 comment on column KNET_SQL_TEST1.sigo is '签报号';
 insert into KNET_SQL_TEST1 select * from knet_sql_log;
@@ -101,12 +101,6 @@ drop table KNET_SQL_TEST</textarea>
                     <%--                            <td>汉族</td>--%>
                     <%--                            <td>1989-10-14</td>--%>
                     <%--                            <td>人生似修行</td>--%>
-                    <%--                        </tr>--%>
-                    <%--                        <tr>--%>
-                    <%--                            <td>孟子</td>--%>
-                    <%--                            <td>华夏族（汉族）</td>--%>
-                    <%--                            <td>公元前-372年</td>--%>
-                    <%--                            <td>猿强，则国强。国强，则猿更强！</td>--%>
                     <%--                        </tr>--%>
                     <%--                        </tbody>--%>
                     <%--                    </table>--%>

@@ -1,7 +1,6 @@
 package cn.knet.util;
 
 import cn.knet.enums.SqlType;
-import cn.knet.vo.DbResult;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
@@ -59,11 +58,7 @@ public class SqlParserTool {
         }
     }
     public static Statement getStatement(String sql) throws JSQLParserException {
-        DbResult result=SqlFormatUtil.sqlValidate(sql);
-        if(result.getCode()==1000){
-            return CCJSqlParserUtil.parse(sql);
-        }
-        return null;
+        return CCJSqlParserUtil.parse(sql);
     }
     /**
      * 获取tables的表名
@@ -118,7 +113,7 @@ public class SqlParserTool {
      * @return
      */
     public static String setRowNum(String sql,int pageNumber){
-        return "SELECT * FROM ( SELECT TMP.*, ROWNUM ROW_ID FROM (" + sql +" ) TMP WHERE ROWNUM <="+PAGESIZE*pageNumber+") WHERE ROW_ID > "+(pageNumber>0?(pageNumber-1)*PAGESIZE:0)+"";
+        return "SELECT * FROM ( SELECT ROWNUM NUM,TMP.*  FROM (" + sql +" ) TMP WHERE ROWNUM <="+PAGESIZE*pageNumber+") WHERE NUM > "+(pageNumber>0?(pageNumber-1)*PAGESIZE:0)+"";
     }
     /**
      * 添加分页
@@ -126,7 +121,7 @@ public class SqlParserTool {
      * @return
      */
     public static String setRowNum(String sql,int pageNumber,int pageSize){
-        return "SELECT * FROM ( SELECT TMP.*, ROWNUM ROW_ID FROM (" + sql +" ) TMP WHERE ROWNUM <="+pageNumber+") WHERE ROW_ID > "+((pageNumber-pageSize)>0?pageNumber-pageSize:0)+"";
+        return "SELECT * FROM ( SELECT ROWNUM NUM,TMP.* FROM (" + sql +" ) TMP WHERE ROWNUM <="+pageNumber+") WHERE NUM > "+((pageNumber-pageSize)>0?pageNumber-pageSize:0)+"";
     }
     /**
      * 添加分页
