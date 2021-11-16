@@ -160,9 +160,9 @@ public class LogEngineService {
     @Async
     public DbResult logImp(KnetSqlDownload sqllog)  {
         if(sqllog.getType()!=null && "wz".equals(sqllog.getType())){
-            sqllog.setTitle(".网址->"+sqllog.getTitle()+"-"+sqllog.getSigo()) ;
+            sqllog.setTitle(".网址->"+sqllog.getTitle()) ;
         }else{
-            sqllog.setTitle("可信->"+sqllog.getTitle()+"-"+sqllog.getSigo()) ;
+            sqllog.setTitle("可信->"+sqllog.getTitle()) ;
         }
         DbResult result = new DbResult();
         long startTime=System.currentTimeMillis();   //获取开始时间
@@ -222,11 +222,15 @@ public class LogEngineService {
         return "";
     }
     private DbResult sendMail(KnetSqlDownload sqllog){
-        MapBuilder map = MapBuilder.build("subject",sqllog.getTitle())
+        Map<String, Object> maps = new HashMap<String, Object>();
+        maps.put("sqllog",sqllog);
+        MapBuilder parm = MapBuilder.build("subject",sqllog.getTitle())
                 .ad("to",sqllog.getEmail())
                 .ad("content","文件下载地址："+sqllog.getDownloadUrl());
+        parm.add("ftl", "sqlImper.ftl");
+        parm.add("jsonMap", maps);
         try {
-            Map<String, Object> results= restTemplate.postForObject("http://knet-cloud-mail/mail/send",map,Map.class);
+            Map<String, Object> results= restTemplate.postForObject("http://knet-cloud-mail/mail/send/ftlMap",parm,Map.class);
             if (results!=null&&!"1000".equals(results.get("code").toString())) {
                 return new DbResult(1002,"发送邮件中台异常");
             }
