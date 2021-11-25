@@ -22,8 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class CommUtils {
-    private static int UPDATESELECTCOUNT=100;//更新操作只查询出100条数据展示到前端
-    public CommUtils() {
+    private CommUtils() {
     }
 
     /***
@@ -31,13 +30,18 @@ public class CommUtils {
      * @param dbResult
      * @param details
      */
-    public static void saveLogDetail(DbResult dbResult, List<KnetSqlLogDetail> details) {
+    public static void saveLogDetail(DbResult dbResult, List<KnetSqlLogDetail> details,boolean isPl,String sql,String sqlType,String msg){
         List<Map<String, Object>> oldData = getUpdateValueByType(dbResult.getMap(), false);//更新前的数据
         List<Map<String, Object>> newData = getUpdateValueByType(dbResult.getMap(), true);//更新后的数据
         KnetSqlLogDetail logDetail=new KnetSqlLogDetail();
         oldData.forEach(o->{
             logDetail.setOld(com.alibaba.fastjson.JSON.parseObject(com.alibaba.fastjson.JSON.toJSONString(o)).toString());
             newData.forEach(n->logDetail.setNow(com.alibaba.fastjson.JSON.parseObject(com.alibaba.fastjson.JSON.toJSONString(n)).toString()));
+            if(isPl){
+                logDetail.setSql(sql);
+                logDetail.setOpType(sqlType);
+                logDetail.setSqlResu(msg);
+            }
             details.add(logDetail);
         });
     }
@@ -93,10 +97,9 @@ public class CommUtils {
     /***
      * 获取Delete的查询sql
      * @param deleteStatement
-     * @param jdbcTemplate
      * @return
      */
-    public static String getSelectByDeleteSql(Delete deleteStatement, JdbcTemplate jdbcTemplate) {
+    public static String getSelectByDeleteSql(Delete deleteStatement) {
         log.info("获取delete的查询sql");
         try {
             String table = deleteStatement.getTable().getName();
@@ -116,15 +119,13 @@ public class CommUtils {
             return  SqlParserTool.getSqlEcception(e);
         }
     }
-    public static DbResult initUpdateDateForSelect(String sql,SqlType sqlType,DbResult dbResult) {
-        //只取前100条展示
+    public static DbResult initUpdateForSelect(String sql, SqlType sqlType, DbResult dbResult) {
         try {
             Update updateStatement = (Update) SqlParserTool.getStatement(sql);
             Map<String, List<OldAndNewVo>> map = new HashMap<>();
             AtomicInteger n = new AtomicInteger(0);
             List<Map<String, Object>> data=dbResult.getData();
             data.stream().forEach(d -> {
-                if(UPDATESELECTCOUNT==0||n.get()<=UPDATESELECTCOUNT){
                     List<OldAndNewVo> list = new ArrayList<>();
                     d.forEach((k,v)->{
                         OldAndNewVo vo = new OldAndNewVo();
@@ -138,8 +139,7 @@ public class CommUtils {
                         });
                         list.add(vo);
                     });
-                    map.put(String.valueOf(n.get()), list);
-                }
+                 map.put(String.valueOf(n.get()), list);
                 n.set(n.get() + 1);
             });
             String msg ="本次更新将影响"+dbResult.getCount()+"条数据,"+(dbResult.getCount()>100?"其中前100条如下":"");
@@ -149,5 +149,22 @@ public class CommUtils {
             log.error("查询sql:{}执行出错{}", sql,SqlParserTool.getSqlEcception(e));
             return DbResult.error(1002, e.getCause().getMessage(), sql).setSqlType(sqlType.name());
         }
+    }
+
+    public static Map<String, List<OldAndNewVo>> initOldMap(DbResult dbResult) {
+        Map<String, List<OldAndNewVo>> map = new HashMap<>();
+        AtomicInteger n = new AtomicInteger(0);
+        List<Map<String, Object>> data = dbResult.getData();
+        data.stream().forEach(d -> {
+            List<OldAndNewVo> list = new ArrayList<>();
+            d.forEach((k, v) -> {
+                OldAndNewVo vo = new OldAndNewVo();
+                vo.setKey(k).setOldValue(v);
+                list.add(vo);
+            });
+            map.put(String.valueOf(n.get()), list);
+            n.set(n.get() + 1);
+        });
+        return map;
     }
 }

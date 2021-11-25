@@ -23,6 +23,7 @@ public class DbResult {
     Map<String, List<OldAndNewVo>> map;
     String sqlType;
     List<String> title;
+    List<KnetSqlLogDetail> logDetails;
     public DbResult(Map<String, List<OldAndNewVo>> map,String sql) {
         this.map = map;
         this.code = 1000;

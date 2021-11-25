@@ -34,7 +34,11 @@ body {
     width: 200px;
     top: 30px;
     border-left: 1px solid #dddddd;
-    overflow-x: hidden;
+    overflow: hidden;
+    transition: all 0.4s ease-in-out;
+}
+.layui-layout-admin .layui-right.active{
+    right: -200px;
 }
 
 .layui-layout-admin .layui-body {
@@ -44,6 +48,9 @@ body {
 .layui-body {
     right: 200px;
     left:0px;
+}
+.layui-body.active{
+    right: 0;
 }
 
 .sql-db {
@@ -132,9 +139,15 @@ body {
 
 .sql-p10 {
     padding: 10px 10px;
+    height: calc( 100% - 30px );
+    overflow-y: scroll;
 }
 .sql-p10 p {
-    padding-bottom: 3px;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+.sql-p10 p:nth-child(even) {
+    background: #f7f7f7de;
 }
 .sql-p10 p span{
     color: #8D8D8D;
@@ -158,16 +171,32 @@ body {
     left: 0;
     top: 28px;
 }
-.btn-close {
+.handlerBtn {
     position: absolute;
     top: 0;
     right: 0;
     z-index: 99;
+    background: #fff;
+}
+.hbtn {
+    float: left;
     width: 30px;
     height: 26px;
     line-height: 26px;
     color: #000;
     font-size: 14px;
+    cursor: pointer;
+}
+.btn-close {
+    /*position: absolute;*/
+    /*top: 0;*/
+    /*right: 0;*/
+    /*z-index: 99;*/
+    /*width: 30px;*/
+    /*height: 26px;*/
+    /*line-height: 26px;*/
+    /*color: #000;*/
+    /*font-size: 14px;*/
     cursor: pointer;
 }
 .sql-select select {
@@ -215,6 +244,7 @@ body {
 
 .layui-side-scroll{
     width: 100%;
+    height: calc( 100% - 50px );
 }
 .sqlRightList tr td {
     position: relative;
@@ -248,9 +278,6 @@ body {
     overflow: scroll;
     height: calc( 100% - 60px );
 }
-.layui-tab .layui-tab-item tr td {
-    /*max-width: 200px;*/
-}
 .custom-drag-control {
     width: calc( 100% - 200px );
     height: 300px;
@@ -259,6 +286,10 @@ body {
     left: 0;
     z-index: 10;
     background: #FFFFFF;
+    transition: all 0.4s ease-in-out;
+}
+.custom-drag-control.active{
+    width: 100% ;
 }
 .custom-drag-control .drager {
     position: absolute;
@@ -273,10 +304,29 @@ body {
     left: 0;
     width: 100%;
     height: 8px;
-    cursor: n-resize;
+    /*cursor: n-resize;*/
     border-top: 1px solid #ddd;
     background: #fafafa;
 }
 .select-table-frame {
     position: relative;
+}
+.navbar {
+    position: absolute;
+    right: 180px;
+    top: 5px;
+    cursor: pointer;
+}
+.navbar .layui-icon {
+    font-size: 18px;
+    color: #6c757d;
+}
+.navbar:hover .layui-icon {
+    color: #009688;
+}
+#resGroup {
+    height: 300px;
+}
+.layui-table-tips-c {
+    padding:0
 }

@@ -10,7 +10,7 @@ import net.sf.jsqlparser.statement.create.table.CreateTable;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.drop.Drop;
 import net.sf.jsqlparser.statement.insert.Insert;
-import net.sf.jsqlparser.statement.select.*;
+import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.util.TablesNamesFinder;
 import org.apache.commons.lang3.StringUtils;
@@ -24,7 +24,6 @@ import java.util.List;
  *
  */
 public class SqlParserTool {
-    private static final int PAGESIZE=50;
     private SqlParserTool() {
     }
 
@@ -105,68 +104,6 @@ public class SqlParserTool {
         TablesNamesFinder tablesNamesFinder = new TablesNamesFinder();
         tableList = tablesNamesFinder.getTableList(statement);
         return tableList;
-    }
-
-    /**
-     * 添加分页
-     * @param sql
-     * @return
-     */
-    public static String setRowNum(String sql,int pageNumber){
-        return "SELECT * FROM ( SELECT ROWNUM NUM,TMP.*  FROM (" + sql +" ) TMP WHERE ROWNUM <="+PAGESIZE*pageNumber+") WHERE NUM > "+(pageNumber>0?(pageNumber-1)*PAGESIZE:0)+"";
-    }
-    /**
-     * 添加分页
-     * @param sql
-     * @return
-     */
-    public static String setRowNum(String sql,int pageNumber,int pageSize){
-        return "SELECT * FROM ( SELECT ROWNUM NUM,TMP.* FROM (" + sql +" ) TMP WHERE ROWNUM <="+pageNumber+") WHERE NUM > "+((pageNumber-pageSize)>0?pageNumber-pageSize:0)+"";
-    }
-    /**
-     * 添加分页
-     * @param sql
-     * @return
-     */
-    public static String getCount(String sql){
-        return "SELECT count(*) FROM ( " + sql +" ) TMP ";
-    }
-    /**
-     * 获取子查询
-     * @param selectBody
-     * @return
-     */
-    public static SubSelect getSubSelect(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            FromItem fromItem = ((PlainSelect) selectBody).getFromItem();
-            if(fromItem instanceof SubSelect){
-                return ((SubSelect) fromItem);
-            }
-        }else if(selectBody instanceof WithItem){
-            SqlParserTool.getSubSelect(((WithItem) selectBody).getSelectBody());
-        }
-        return null;
-    }
-
-    /**
-     * 判断是否为多级子查询
-     * @param selectBody
-     * @return
-     */
-    public static boolean isMultiSubSelect(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            FromItem fromItem = ((PlainSelect) selectBody).getFromItem();
-            if(fromItem instanceof SubSelect){
-                SelectBody subBody = ((SubSelect) fromItem).getSelectBody();
-                if(subBody instanceof PlainSelect){
-                    FromItem subFromItem = ((PlainSelect) subBody).getFromItem();
-                    if(subFromItem instanceof SubSelect){
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
     }
     public static String getSqlEcception(Exception e) {
         if(e instanceof NullPointerException){

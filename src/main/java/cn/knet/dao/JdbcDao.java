@@ -1,7 +1,6 @@
 package cn.knet.dao;
 
 import cn.knet.conf.SpringTools;
-import cn.knet.util.SqlParserTool;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.statement.update.Update;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +18,8 @@ import java.util.Map;
 @Slf4j
 public class JdbcDao{
 private static final String COLUMN_NAME = "COLUMN_NAME";
+private static final int PAGESIZE=50;
+private static int UPDATESELECTCOUNT=100;//更新操作只查询出100条数据展示到前端
     private JdbcDao() {
     }
 
@@ -98,15 +99,23 @@ private static final String COLUMN_NAME = "COLUMN_NAME";
         return clumns.toString();
     }
     public int getCout(String type, String sql){
-        log.info("计数sql:{}", SqlParserTool.getCount(sql));
-        return SpringTools.getJdbcTemplate(type).queryForObject(SqlParserTool.getCount(sql), int.class);
+        sql=JdbcDao.getCountSql(sql);
+        log.info("计数sql:{}", sql);
+        return SpringTools.getJdbcTemplate(type).queryForObject(sql,int.class);
     }
-    public List<Map<String, Object>> query(String type, String sql,int pageNumber){
-        if(0!=pageNumber){
-            log.info("分页sql:{}", SqlParserTool.setRowNum(sql, pageNumber));
-            return SpringTools.getJdbcTemplate(type).queryForList(SqlParserTool.setRowNum(sql,pageNumber));
-        }
+    public List<Map<String, Object>> query(String type, String sql,int pageNumber,int count){
+        //-2 更新的查询，默认只取前100条
+        if(pageNumber==-2)
+            return SpringTools.getJdbcTemplate(type).queryForList(setRowNum(sql,UPDATESELECTCOUNT,UPDATESELECTCOUNT));
+        //-1 查询全部不分页
+        if(pageNumber==-1)
         return SpringTools.getJdbcTemplate(type).queryForList(sql);
+        sql=getPageSql(sql,pageNumber,count);
+        log.info("分页sql:{}",sql);
+        if(StringUtils.isNotBlank(sql)){
+            return SpringTools.getJdbcTemplate(type).queryForList(sql);
+        }
+        return new ArrayList<Map<String, Object>>();
     }
     public int update(String type, String sql) {
         log.info("执行的sql:{}", sql);
@@ -115,6 +124,39 @@ private static final String COLUMN_NAME = "COLUMN_NAME";
     public void execute(String type, String sql) {
         log.info("执行的sql:{}", sql);
         SpringTools.getJdbcTemplate(type).execute(sql);
+    }
+
+    /**
+     * 添加分页
+     * @param sql
+     * @return
+     */
+    public static String getPageSql(String sql,int pageNumber,int count){
+        int startNum=(pageNumber-1)*PAGESIZE;
+        int total=PAGESIZE*pageNumber;
+        if(count<total&&count>=startNum){
+            return "SELECT * FROM ( SELECT ROWNUM NUM,TMP.*  FROM (" + sql +" ) TMP WHERE ROWNUM <="+count+") WHERE NUM > "+startNum+"";
+        }
+        if(count<startNum){
+            return "";
+        }
+        return "SELECT * FROM ( SELECT ROWNUM NUM,TMP.*  FROM (" + sql +" ) TMP WHERE ROWNUM <="+total+") WHERE NUM > "+(pageNumber>0?startNum:0)+"";
+    }
+    /**
+     * 查询总条数
+     * @param sql
+     * @return
+     */
+    public static String getCountSql(String sql){
+        return "SELECT count(*) FROM ( " + sql +" ) TMP ";
+    }
+    /**
+     * 添加分页：导出
+     * @param sql
+     * @return
+     */
+    public static String setRowNum(String sql,int pageNumber,int pageSize){
+        return "SELECT * FROM ( SELECT ROWNUM NUM,TMP.* FROM (" + sql +" ) TMP WHERE ROWNUM <="+pageNumber+") WHERE NUM > "+((pageNumber-pageSize)>0?pageNumber-pageSize:0)+"";
     }
 }
 

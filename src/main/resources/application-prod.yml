@@ -14,7 +14,7 @@ spring:
     wz:
       driver-class-name: com.p6spy.engine.spy.P6SpyDriver
       #oracle.jdbc.driver.OracleDriver
-      url: jdbc:oracle:thin:@vdbwlk.knet.cn:1521:ora9
+      url: jdbc:p6spy:oracle:thin:@vdbwlk.knet.cn:1521:ora9
       username: knet
       password: kwdomain
       dbcp2:
@@ -33,8 +33,8 @@ spring:
     seal:
       driver-class-name: com.p6spy.engine.spy.P6SpyDriver
       #oracle.jdbc.driver.OracleDriver
-      url: jdbc:p6spy:oracle:thin:@default.test.db.knet.cn:1521:orautf8
-      username: kx_seal_test
+      url: jdbc:p6spy:oracle:thin:@seal.db.knet.cn:1523:portal
+      username: kx_seal
       password: cnnic
       dbcp2:
         max-idle: 30

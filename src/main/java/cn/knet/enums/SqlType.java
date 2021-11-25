@@ -14,5 +14,6 @@ public enum  SqlType {
     //下面这些是为了前端区分
     EXPORT,
     UPDATESELECT,
+    DELETESELECT,
     PIUPDATESELECT
 }

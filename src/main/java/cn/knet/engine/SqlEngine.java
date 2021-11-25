@@ -1,7 +1,6 @@
 package cn.knet.engine;
 
 import cn.knet.dao.JdbcDao;
-import cn.knet.service.LogEngineService;
 import cn.knet.vo.DbResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,9 +16,6 @@ import java.util.Map;
 @Slf4j
 public class SqlEngine {
     @Resource
-    private LogEngineService logEngineService;
-    private int logCount=50;//日志只存小于50条的数据，大于100条不存
-    @Resource
     private JdbcDao jdbcDao;
     /**
      * 查询引擎
@@ -27,17 +23,28 @@ public class SqlEngine {
      * @param pageNumber
      * @return
      */
-    public DbResult queryDb(String type, String sql,int pageNumber) {
+    public DbResult queryDb(String type,String sql,int pageNumber) {
         DbResult result = new DbResult();
-        result.setCount(jdbcDao.getCout(type,sql));
+        int count=jdbcDao.getCout(type,sql);
+        result.setCount(count);
         if(result.getCount()==0){
-            return result.setMsg("0条数据").setCode(1000).setSql(sql);
+            return result.setMsg("本次共查询到0条数据。").setCode(1002).setSql(sql);
         }
-        List<Map<String, Object>> list = jdbcDao.query(type,sql,pageNumber);
+        List<Map<String, Object>> list=jdbcDao.query(type,sql,pageNumber,count);
         if (list.isEmpty()) {
-            return result.setMsg("0条数据").setCode(1000).setSql(sql);
+            return result.setMsg("本次共查询到0条数据。").setCode(1002).setSql(sql);
         }
          return result.setData(list).setCode(1000);
+    }
+
+    /***
+     * 查询总数引擎
+     * @param type
+     * @param sql
+     * @return
+     */
+    public int queryCount(String type,String sql) {
+        return jdbcDao.getCout(type,sql);
     }
     /***
      * 表操作引擎

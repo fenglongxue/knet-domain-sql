@@ -1,7 +1,10 @@
 package cn.knet.web;
 
 import cn.knet.service.LogEngineService;
-import cn.knet.vo.*;
+import cn.knet.vo.DbResult;
+import cn.knet.vo.KnetSqlDownload;
+import cn.knet.vo.KnetSqlSelect;
+import cn.knet.vo.KnetSqlShare;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,8 +12,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
 
 @Controller
 @RequestMapping("log")
@@ -27,13 +28,12 @@ public class logController extends SuperController {
 
     @RequestMapping("/sava")
     @ResponseBody
-    public DbResult logSava(HttpServletRequest request, KnetSqlLog log){
+    public DbResult logSava(HttpServletRequest request, KnetSqlSelect log){
         // String sql, String opType,String title
         log.setUserId(this.getCurrentLoginUser().getId());
-        List<KnetSqlLogDetail> details = new ArrayList<KnetSqlLogDetail>();
-        details.add(new KnetSqlLogDetail("0","0"));
-        details.add(new KnetSqlLogDetail("1","1"));
-        return logEngineService.logSava(log,details);
+        log.setSql("select * from ");
+
+        return logEngineService.logSelectSava(log);
     }
     @RequestMapping("/share")
     @ResponseBody

@@ -39,6 +39,16 @@ public class KnetSqlLogDetail implements Serializable {
 
     @TableField("CREATE_DATE")
     private Date createDate;
+
+    @TableField("OP_TYPE")
+    private String opType;
+    /**
+     * 查询为查询结果，日志查看时提供下载功能
+     */
+    @TableField("SQL_RESU")
+    private String sqlResu;
+    @TableField("SQL")
+    private String sql;
     public KnetSqlLogDetail() {}
 
     public KnetSqlLogDetail(String old,String now) {

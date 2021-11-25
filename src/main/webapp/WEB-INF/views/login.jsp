@@ -15,17 +15,12 @@
 	<link rel="stylesheet" href="${ctx }/ui/css/login.css"/>
 </head>
 <body>
-	<div class="header">
-		<h2>DB MANAGER</h2>
-	</div>
 	<div class="loginContent">
 		<div class="row">
 			<div class="panel panel-primary">
-				<div class="panel-heading">
-					<span class="glyphicon glyphicon-user"></span>
-					<h3 class="panel-title">
-						用户名密码登录
-					</h3>
+				<div class="layadmin-user-login-box layadmin-user-login-header">
+					<h2>DB MANAGER</h2>
+					<p>中网数据库管理系统</p>
 				</div>
 				<div class="panel-body">
 					<form role="form" method="post" id="form">
@@ -33,11 +28,11 @@
 						<input type="hidden" name="serviceToken" value="knet" />
 
 						<div class="form-group">
-							<label for="username">用户名</label>
+							<label class="layui-icon-username"></label>
 							<input type="text" value="" class="form-control" id="j_username" name="username" placeholder="英文字符,不能有中文">
 						</div>
 						<div class="form-group">
-							<label for="password">密码</label>
+							<label class="layui-icon-password" ></label>
 							<input type="password" value="" class="form-control" id="j_password" name="password" placeholder="6-10位英文数字">
 						</div>
 						<div class="alert alert-danger">
@@ -48,8 +43,6 @@
 						</div>
 					</form>
 				</div>
-
-
 			</div>
 		</div>
 	</div>

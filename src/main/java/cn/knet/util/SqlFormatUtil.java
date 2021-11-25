@@ -8,7 +8,6 @@ import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.sql.parser.ParserException;
 import com.alibaba.druid.sql.parser.SQLParserUtils;
 import com.alibaba.druid.sql.parser.SQLStatementParser;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
@@ -84,22 +83,29 @@ private static final String CZLXMSG = "目前的操作类型是";
             if (null == statement) {
                 return DbResult.error(1002, "sql格式有问题！", sql);
             }
+            SqlType sqlType = SqlParserTool.getSqlType(sql);
+            if(sqlType.equals(SqlType.COMMENT)){
+                sqlType=SqlType.CREATETABLE;
+            }
+            if(sqlType.equals(SqlType.SELECT)){
+                return DbResult.success(1000,"校验成功！").setSqlType(sqlType.name());
+            }
             List<String> tables = SqlParserTool.getTableList(statement);
             if (tables.isEmpty()) {
-                return DbResult.error(1002, "表名获取失败！", sql);
+                return DbResult.error(1002, "表名获取失败！", sql).setSqlType(sqlType.name());
             }
             if (tables.size() > 1) {
-                return DbResult.error(1002, "目前只支持单表操作！", sql);
+                return DbResult.error(1002, "目前只支持单表操作！", sql).setSqlType(sqlType.name());
             }
-            SqlType sqlType = SqlParserTool.getSqlType(sql);
+
             if (sqlType.equals(SqlType.DROP)) {
                 int count = SpringTools.getJdbcTemplate(type).queryForObject("SELECT count(*) FROM " + tables.get(0).toUpperCase(), int.class);
                 if (count > 0) {
                     log.error("表操作校验出错：数据表" + tables.get(0).toUpperCase() + "中有数据，无法执行此操作！");
-                    return DbResult.error(1002, "表操作校验出错：数据表" + tables.get(0).toUpperCase() + "中有" + count + "条数据，无法执行此操作！", sql);
+                    return DbResult.error(1002, "表操作校验出错：数据表" + tables.get(0).toUpperCase() + "中有" + count + "条数据，无法执行此操作！", sql).setSqlType(sqlType.name());
                 }
             }
-            return DbResult.success(1000, tables.get(0).toUpperCase());
+            return DbResult.success(1000, tables.get(0).toUpperCase()).setSqlType(sqlType.name());
         } catch (Exception e) {
         log.error("校验出错:校验出错{}", SqlParserTool.getSqlEcception(e));
         return DbResult.error(1002,"校验出错:"+SqlParserTool.getSqlEcception(e), sql);

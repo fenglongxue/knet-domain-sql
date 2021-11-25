@@ -1,14 +1,16 @@
 package cn.knet.service;
 
 import cn.knet.conf.SpringTools;
+import cn.knet.dao.JdbcDao;
 import cn.knet.domain.vo.MapBuilder;
 import cn.knet.oss.UploadUtils;
 import cn.knet.util.EasyExcelUtils;
 import cn.knet.util.NoModelWriteData;
-import cn.knet.util.SqlParserTool;
 import cn.knet.util.UUIDGenerator;
 import cn.knet.vo.*;
 import com.alibaba.excel.util.DateUtils;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,15 +55,18 @@ public class LogEngineService {
         result.setCode(1000);
         result.setMsg("插入成功");
         if(!details.isEmpty()){
-            String detailsSql = "INSERT INTO KNET_SQL_LOG_DETAIL (ID,LOG_ID,NOW,OLD)  VALUES (?,?,?,?)";
+            String detailsSql = "INSERT INTO KNET_SQL_LOG_DETAIL (ID,LOG_ID,NOW,OLD,SQL,OP_TYPE,SQL_RESU)  VALUES (?,?,?,?,?,?,?)";
             try {
                 jdbcTemplate.batchUpdate(detailsSql, new BatchPreparedStatementSetter() {
                     @Override
                     public void setValues(PreparedStatement ps, int i) throws SQLException {
                         ps.setString(1, UUIDGenerator.getUUID());
                         ps.setString(2, logs.getId());
-                        ps.setString(3, details.get(i).getNow());
-                        ps.setString(4, details.get(i).getOld());
+                        ps.setString(3, StringUtils.isNotBlank(details.get(i).getNow())?JSON.parse(details.get(i).getNow()).toString():"");
+                        ps.setString(4, StringUtils.isNotBlank(details.get(i).getOld())?JSON.parse(details.get(i).getOld()).toString():"");
+                        ps.setString(5, details.get(i).getSql());
+                        ps.setString(6, details.get(i).getOpType());
+                        ps.setString(7, details.get(i).getSqlResu());
                     }
                     @Override
                     public int getBatchSize() {
@@ -75,6 +80,30 @@ public class LogEngineService {
             }
         }
 
+        return  result;
+    }
+    /**
+     *
+     * 查询日志保存
+     * @param logs
+     * @return
+     */
+    public DbResult logSelectSava(KnetSqlSelect logs)  {
+        DbResult result = new DbResult();
+        String insertSql = "INSERT INTO KNET_SQL_SELECT (ID,SQL,TYPE,USER_ID,SQL_RESU,SQL_DETAIL,TITLE) VALUES (?,?,?,?,?,?,?)";
+        log.info("查询日志保存数据为：{}",logs);
+        logs.setId(UUIDGenerator.getUUID());
+        String detail ="";
+        if(logs.getSqlDetail()!=null&&logs.getSqlDetail().size()>0){
+            detail= JSONArray.toJSON(logs.getSqlDetail()).toString();
+        }
+        String title ="";
+        if(logs.getTitle()!=null&&logs.getTitle().size()>0){
+            title= JSONArray.toJSON(logs.getTitle()).toString();
+        }
+        jdbcTemplate.update(insertSql, logs.getId(),logs.getSql(),logs.getType(),logs.getUserId(),logs.getSqlResu(),detail,title);
+        result.setCode(1000);
+        result.setMsg("插入成功");
         return  result;
     }
     /**
@@ -116,7 +145,7 @@ public class LogEngineService {
         StringBuilder listSql =  new StringBuilder("select l.id,sql,title,stor_type,u.name from KNET_SQL_SHARE l , KNET_USER u where l.USER_ID=U.ID  ");
         if(StringUtils.isNotBlank(storType)){
             if("SAVE".equals(storType)){
-                listSql.append("and  l.user_id=?  and stor_Type = 'SAVE'");
+                listSql.append("and  l.user_id=? ");
             }else{
                 listSql.append("and  l.user_id!=?  and stor_Type = 'SHARE'");
             }
@@ -130,7 +159,9 @@ public class LogEngineService {
             listSql.append(" and type = '"+type+"'");
         }
         listSql.append(" order by l.CREATE_DATE desc");
-        List<Map<String, Object>> list = jdbcTemplate.queryForList(SqlParserTool.setRowNum(listSql.toString(),pageNumber),userId);
+         List<Map<String, Object>> list = jdbcTemplate.queryForList(JdbcDao.getPageSql(listSql.toString(),pageNumber,
+                 jdbcTemplate.queryForObject(JdbcDao.getCountSql(listSql.toString()), int.class,userId)),
+                userId);
         List<String> listKey = new ArrayList<>();
         if(!list.isEmpty()){
             list.get(0).forEach((x,y)->listKey.add(x));
@@ -159,18 +190,13 @@ public class LogEngineService {
      */
     @Async
     public DbResult logImp(KnetSqlDownload sqllog)  {
-        if(sqllog.getType()!=null && "wz".equals(sqllog.getType())){
-            sqllog.setTitle(".网址->"+sqllog.getTitle()) ;
-        }else{
-            sqllog.setTitle("可信->"+sqllog.getTitle()) ;
-        }
         DbResult result = new DbResult();
         long startTime=System.currentTimeMillis();   //获取开始时间
 
-        List<Map<String, Object>> list = SpringTools.getJdbcTemplate(sqllog.getType()).queryForList(SqlParserTool.setRowNum(sqllog.getSql(),10000,10000));
+        List<Map<String, Object>> list = SpringTools.getJdbcTemplate(sqllog.getType()).queryForList(JdbcDao.setRowNum(sqllog.getSql(),10000,10000));
         List<String> listKey ;
         if ( !list.isEmpty()) {
-             listKey = new ArrayList<>(list.get(0).keySet());
+            listKey = new ArrayList<>(list.get(0).keySet());
             result.setData(list).setSql(sqllog.getSql()).setTitle(listKey);
         } else {
             return  result.setMsg("没有查询出符合条件的数据").setCode(1002).setSql(sqllog.getSql());
@@ -224,7 +250,7 @@ public class LogEngineService {
     private DbResult sendMail(KnetSqlDownload sqllog){
         Map<String, Object> maps = new HashMap<String, Object>();
         maps.put("sqllog",sqllog);
-        MapBuilder parm = MapBuilder.build("subject",sqllog.getTitle())
+        MapBuilder parm = MapBuilder.build("subject","数据导出("+sqllog.getSigo()+")")
                 .ad("to",sqllog.getEmail())
                 .ad("content","文件下载地址："+sqllog.getDownloadUrl());
         parm.add("ftl", "sqlImper.ftl");
