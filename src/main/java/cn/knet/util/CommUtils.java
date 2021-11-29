@@ -81,7 +81,7 @@ public class CommUtils {
             if (where instanceof BinaryExpression) {
                 log.info("where 条件为:{}", ((BinaryExpression) where).getLeftExpression());
                 if((null != updateStatement.getTable().getAlias())){
-                    selectSql.append(" where " +where.toString().replaceAll(updateStatement.getTable().getAlias().getName()+"."," "));//去掉别名
+                    selectSql.append(" where " +where.toString().replaceFirst(updateStatement.getTable().getAlias().getName()+"."," "));//去掉别名
                 }else{
                     selectSql.append(" where " + where.toString());
                 }
@@ -107,7 +107,7 @@ public class CommUtils {
             Expression where = deleteStatement.getWhere();
             if (where instanceof BinaryExpression) {
                 if((null != deleteStatement.getTable().getAlias())){
-                    selectSql.append(" where " +where.toString().replaceAll(deleteStatement.getTable().getAlias().getName()+"."," "));//去掉别名
+                    selectSql.append(" where " +where.toString().replaceFirst(deleteStatement.getTable().getAlias().getName()+"."," "));//去掉别名
                 }else{
                     selectSql.append(" where " + where.toString());
                 }

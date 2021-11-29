@@ -386,7 +386,7 @@ var sqlInit = {
         }
         var html = '<div class="layui-form">';
         html+='<input id="sigo" type="text" class="layui-layer-input" value="" placeholder="请输入钉钉签报号" lay-verify="required" autocomplete="off">';
-        html+='<input id="email" style="margin-top:10px;" type="text" class="layui-layer-input" value="" placeholder="请输入接受邮箱" lay-verify="email" autocomplete="off">';
+        html+='<input id="email" style="margin-top:10px;" type="text" class="layui-layer-input" value="" placeholder="请输入接收邮箱" lay-verify="email" autocomplete="off">';
         html+='<input id="copyEmail" style="margin-top:10px;" type="text" class="layui-layer-input" value="" placeholder="请输入抄送邮箱" lay-verify="email" autocomplete="off">';
         html+='<input id="impTitle" style="margin-top:10px;" type="text" class="layui-layer-input" value="" placeholder="请输入标题" lay-verify="required" autocomplete="off">';
         html+='<button type="submit" id="logExportBtn" class="layui-btn layui-btn-sm layui-btn-normal export-btn" lay-submit="" lay-filter="logExportBtn">确定</button>';
@@ -407,7 +407,7 @@ var sqlInit = {
                 sigo: $('#sigo').val(),
                 title: $('#impTitle').val(),
                 email: $('#email').val(),
-                copyEmail: $('#copyEmail').val(),
+                copyEmail: $('#copyEmail').val()
             };
             layer.closeAll();
             layer.load(2);
@@ -587,6 +587,7 @@ var sqlInit = {
 }
 
 $(function(){
+    openSocket();
     //运行
     $('#check').on('click',sqlInit.check);
     // $('#batchUpdate').on('click',sqlInit.batchUpdate);
@@ -659,3 +660,38 @@ $(function(){
         $('.layui-table-body').css({'height':rh-95});
     })
 })
+var socket;
+function openSocket() {
+    if(typeof(WebSocket) == "undefined") {
+        console.log("您的浏览器不支持WebSocket");
+    }else{
+        console.log("您的浏览器支持WebSocket");
+        //实现化WebSocket对象，指定要连接的服务器地址与端口  建立连接
+        var socketUrl="ws://"+window.location.host+"/ws/"+userId;;
+        console.log(socketUrl);
+        if(socket!=null){
+            socket.close();
+            socket=null;
+        }
+        socket = new WebSocket(socketUrl);
+        //打开事件
+        socket.onopen = function() {
+            console.log("websocket已打开");
+        };
+        //获得消息事件
+        socket.onmessage = function(msg) {
+            console.log(msg.data);
+            //console.log(JSON.parse(msg.data).sql);
+            //发现消息进入    开始处理前端触发逻辑
+
+        };
+        //关闭事件
+        socket.onclose = function() {
+            console.log("websocket已关闭");
+        };
+        //发生了错误事件
+        socket.onerror = function() {
+            console.log("websocket发生了错误");
+        }
+    }
+}

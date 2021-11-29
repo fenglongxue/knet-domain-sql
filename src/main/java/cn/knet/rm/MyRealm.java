@@ -40,11 +40,12 @@ public class MyRealm extends AuthorizingRealm {
         List<KnetUser> l = SpringTools.getJdbcTemplate("wz").query("select  * from knet_user where  username=? and password =? and status =? "
                 ,new BeanPropertyRowMapper<>(KnetUser.class),token.getUsername(),DigestUtils.md5Hex(new String(token.getPassword())),StatusEnum.ABLE.getValue());
         if (!l.isEmpty()) {
-//            List<String> role = SpringTools.getJdbcTemplate("wz").query("select ROLE from KNET_ROLES r ,KNET_USER_ROLES ur where r.ID=ur.R_ID and ROLE='开发人员' and ur.USER_ID= ? ",
-//                    new BeanPropertyRowMapper<>(),l.get(0).getId());
-//            if(!role.isEmpty()){
-                return new SimpleAuthenticationInfo(l.get(0), token.getPassword() , getName());
-//            }
+           List<String> role = SpringTools.getJdbcTemplate("wz").query("select ROLE from KNET_ROLES r ,KNET_USER_ROLES ur where r.ID=ur.R_ID and ROLE='开发人员' and ur.USER_ID= ? ",
+                   new BeanPropertyRowMapper<>(String.class),l.get(0).getId());
+           if(!role.isEmpty()){
+             return new SimpleAuthenticationInfo(l.get(0), token.getPassword() , getName());
+           }
+            throw new AuthenticationException("没有开发人员权限");
         }
 
         throw new AuthenticationException("用户名密码错误");

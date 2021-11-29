@@ -113,10 +113,10 @@ public class LogEngineService {
      * @return
      */
     public DbResult logDownload(KnetSqlDownload download) {
-        String insertSql = "INSERT INTO KNET_SQL_DOWNLOAD (ID,USER_ID,SIGO,EMAIL,DOWNLOAD_URL,SQL,type) VALUES (?,?,?,?,?,?,?)";
+        String insertSql = "INSERT INTO KNET_SQL_DOWNLOAD (ID,USER_ID,SIGO,EMAIL,COPY_EMAIL,DOWNLOAD_URL,SQL,type) VALUES (?,?,?,?,?,?,?,?)";
         log.info("sql保存数据为：{}",download);
         jdbcTemplate.update(insertSql, UUIDGenerator.getUUID(),
-                download.getUserId(),download.getSigo(),download.getEmail(),download.getDownloadUrl(),download.getSql(),download.getType());
+                download.getUserId(),download.getSigo(),download.getEmail(),download.getCopyEmail(),download.getDownloadUrl(),download.getSql(),download.getType());
         return  new DbResult(1000,"保存成功");
     }
     /**
@@ -249,9 +249,10 @@ public class LogEngineService {
     }
     private DbResult sendMail(KnetSqlDownload sqllog){
         Map<String, Object> maps = new HashMap<String, Object>();
+        String[] to  = new String[]{sqllog.getEmail(),sqllog.getCopyEmail()};
         maps.put("sqllog",sqllog);
         MapBuilder parm = MapBuilder.build("subject","数据导出("+sqllog.getSigo()+")")
-                .ad("to",sqllog.getEmail())
+                .ad("to",to)
                 .ad("content","文件下载地址："+sqllog.getDownloadUrl());
         parm.add("ftl", "sqlImper.ftl");
         parm.add("jsonMap", maps);

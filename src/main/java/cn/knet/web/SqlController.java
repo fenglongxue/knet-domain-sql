@@ -6,19 +6,17 @@ import cn.knet.service.PlUpdateService;
 import cn.knet.service.RunService;
 import cn.knet.service.UpdateService;
 import cn.knet.util.SqlFormatUtil;
-import cn.knet.util.SqlParserTool;
 import cn.knet.vo.DbResult;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jsqlparser.JSQLParserException;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import javax.websocket.EncodeException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,8 +28,6 @@ public class SqlController extends SuperController {
     RunService runService;
     @Resource
     PlUpdateService plUpdateService;
-    @Resource
-    UpdateService updateService;
     @Resource
     ExcService excService;
     private static final String SQLS = "sqls[]";
@@ -108,7 +104,7 @@ public class SqlController extends SuperController {
      */
     @RequestMapping(value = "/plUpdate", method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
-    public List<DbResult> updateForPl(HttpServletRequest request, String type) {
+    public List<DbResult> updateForPl(String type,HttpServletRequest request) throws IOException, EncodeException {
         List<DbResult> list = new ArrayList<>();
         String[] sqls = request.getParameterValues(SQLS);
         if (null == sqls || sqls.length <= 0) {

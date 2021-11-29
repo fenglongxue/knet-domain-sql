@@ -23,6 +23,7 @@
     <script>
         var commonCtx = '${ctx}';
         var userName = "${userAccount.name}";
+        var userId='${userAccount.id}';
     </script>
 </head>
 <body>

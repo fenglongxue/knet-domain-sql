@@ -44,8 +44,8 @@ public class logController extends SuperController {
     }
     @RequestMapping("/imp")
     @ResponseBody
-    public DbResult logImp(HttpServletRequest request, String sql, String type, String sigo, String email,String title){
-        return logEngineService.logImp(new KnetSqlDownload(sql,type,sigo,email,this.getCurrentLoginUser().getId(),title));
+    public DbResult logImp(HttpServletRequest request, String sql, String type, String sigo, String email,String copyEmail,String title){
+        return logEngineService.logImp(new KnetSqlDownload(sql,type,sigo,email,copyEmail,this.getCurrentLoginUser().getId(),title));
     }
     @RequestMapping("/delete")
     @ResponseBody

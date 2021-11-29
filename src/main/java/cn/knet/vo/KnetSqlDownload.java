@@ -43,7 +43,11 @@ public class KnetSqlDownload implements Serializable {
      */
     @TableField("EMAIL")
     private String email;
-
+    /**
+     * 抄送邮件
+     */
+    @TableField("EMAIL")
+    private String copyEmail;
     /**
      * 下载地址
      */
@@ -71,11 +75,12 @@ public class KnetSqlDownload implements Serializable {
     @TableField("TITLE")
     private String title;
 
-    public KnetSqlDownload(String sql, String type,String sigo,String email,String userId,String title) {
+    public KnetSqlDownload(String sql, String type,String sigo,String email,String copyEmail,String userId,String title) {
         this.sql = sql;
         this.type = type;
         this.sigo = sigo;
         this.email = email;
+        this.copyEmail = copyEmail;
         this.userId = userId;
         this.title = title;
     }
