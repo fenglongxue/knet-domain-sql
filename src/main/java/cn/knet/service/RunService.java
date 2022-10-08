@@ -31,7 +31,6 @@ public class RunService {
     LogEngineService logEngineService;
     @Resource
     UpdateService updateService;
-    private int logCount = 50;//日志只存小于50条的数据，大于100条不存
 
     /***
      * 运行操作：具体执行那个方法
@@ -53,11 +52,11 @@ public class RunService {
                 case DELETE:
                     return deleteForSelect(sql, type, SqlType.DELETESELECT);
                 case COMMENT:
-                    return alert(sql, type, SqlType.CREATETABLE,userId);
+                    return alert(sql, type, SqlType.ALTER,userId);
                 case ALTER:
                     return alert(sql, type, opType, userId);
                 case CREATETABLE:
-                    return alert(sql, type, opType, userId);
+                    return alert(sql, type, SqlType.ALTER, userId);
                 case DROP:
                     return alert(sql, type, opType, userId);
                 default:
@@ -89,10 +88,10 @@ public class RunService {
             String msg = "执行" + SqlType.SELECT.name() + "操作成功,共查询到" + dbResult.getCount() + "条数据，执行时间" + time + "毫秒。";
             log.info("sql{}:" + msg, sql);
             //保存日志
-            logEngineService.logSelectSava(new KnetSqlSelect().setSql(sql).setUserId(userId).setType(type).setSqlResu("执行" + SqlType.SELECT.name()+"操作成功,共查询到" +dbResult.getData().size() + "条数据，执行时间" + time + "毫秒。").setSqlDetail(dbResult.getData()).setTitle(listKey));
+            int startNum=(pageNumber==0?0:(pageNumber-1)*50+1);
+            logEngineService.logSelectSava(new KnetSqlSelect().setSql(sql).setUserId(userId).setType(type).setSqlResu("执行" + SqlType.SELECT.name()+"操作成功,查询第" +startNum+"条至"+(startNum+dbResult.getData().size()-1)+"条数据，共消耗时间" + time + "毫秒。").setSqlDetail(dbResult.getData()).setTitle(listKey));
             return dbResult.setMsg(msg).setSql(sql).setTitle(listKey).setSqlType(sqlType.name());
         }catch (Exception e){
-            log.error("查询sql:{}执行出错{}", sql, SqlParserTool.getSqlEcception(e));
             return new DbResult().setCode(1002).setSql(sql).setMsg(SqlParserTool.getSqlEcception(e)).setSqlType(sqlType.name());
         }
 
@@ -112,23 +111,22 @@ public class RunService {
             String selectSql = CommUtils.getSelectByUpdateSql((Update) SqlParserTool.getStatement(sql), SpringTools.getJdbcTemplate(type));
             int total=sqlEngine.queryCount(type,selectSql);
             if(total<0){
-                return new DbResult().setCode(1002).setSql(sql).setMsg("将更新数据条数为0，请核对").setSqlType(sqlType.name());
+                return new DbResult().setCode(1002).setSql(sql).setMsg("本次预更新操作共查询出"+total+"条数据。").setSqlType(sqlType.name());
             }
             //只取前100条展示
             DbResult dbResult = sqlEngine.queryDb(type, selectSql, -2);//-2是按钮更新查询显示的条数来显示
             if (dbResult.getCount()==0)
-                return dbResult.setCode(1002).setData(null).setSql(sql).setMsg("请核对"+dbResult.getMsg()).setSqlType(sqlType.name());
+                return dbResult.setCode(1002).setData(null).setSql(sql).setMsg("本次预更新操作共查询出"+total+"条数据。").setSqlType(sqlType.name());
             List<String> listKey = new ArrayList<>();
             dbResult.getData().get(0).forEach((x, y) -> {
                 listKey.add(x);
             });
             dbResult = CommUtils.initUpdateForSelect(sql, sqlType, dbResult);
             long time = System.currentTimeMillis() - startTime;
-            String msg = dbResult.getMsg() + "执行时间" + time + "毫秒。";
+            String msg = dbResult.getMsg() +"，查询时间"+time+"毫秒。点击执行按钮将更新数据。";
             log.info("sql{}:" + msg, sql);
             return dbResult.setMsg(msg).setTitle(listKey).setSql(sql).setSqlType(sqlType.name());
         } catch (JSQLParserException e) {
-            log.error("查询sql:{}执行出错{}", sql, SqlParserTool.getSqlEcception(e));
             return DbResult.error(1002, e.getCause().getMessage(), sql).setSqlType(sqlType.name());
         }
     }
@@ -147,7 +145,6 @@ public class RunService {
             }
             return dbResult;
         } catch (Exception e) {
-            log.error("sql:{}表操作执行出错{}", sql, SqlParserTool.getSqlEcception(e));
             return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg(SqlParserTool.getSqlEcception(e));
         }
     }
@@ -168,7 +165,6 @@ public class RunService {
             }
             return dbResult;
         } catch (Exception e) {
-            log.error("表插入sql:{}执行出错{}", sql, SqlParserTool.getSqlEcception(e));
             return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg(SqlParserTool.getSqlEcception(e));
         }
     }
@@ -186,13 +182,13 @@ public class RunService {
             String selectSql=CommUtils.getSelectByDeleteSql((Delete) SqlParserTool.getStatement(sql));
             int total=sqlEngine.queryCount(type,selectSql);
             if(total<0){
-                return new DbResult().setCode(1002).setSql(sql).setMsg("将删除的数据为0条，请核对").setSqlType(sqlType.name());
+                return new DbResult().setCode(1002).setSql(sql).setMsg("本次预删除操作共查询出0条数据。").setSqlType(sqlType.name());
             }
             //删除也只取前100条显示
             DbResult dbResult=sqlEngine.queryDb(type,selectSql,-2);
             if(dbResult.getCode()!=1000||dbResult.getData().isEmpty()){
-                log.error("查询sql:{}执行出错{}", sql,"将删除的数据为0条");
-                return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg("请核对,"+dbResult.getMsg());
+                log.error("查询sql:{}执行出错{}", sql,"将删除的数据为0条。");
+                return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg("本次预删除操作共查询出0条数据。");
             }
             List<String> listKey = new ArrayList<>();
             dbResult.getData().get(0).forEach((x, y) -> {
@@ -200,11 +196,10 @@ public class RunService {
             });
             dbResult.setMap(CommUtils.initOldMap(dbResult));
             long time = System.currentTimeMillis() - startTime;
-            String msg = "本次删除将有"+total+"条数据从表" + SqlParserTool.getTableList(SqlParserTool.getStatement(sql)).get(0).toUpperCase()+"中删除"+(total>100?"其中前100条如下":"")+"，执行时间"+time+"毫秒。";
+            String msg = "本次预删除操作共查询出"+total+"条数据"+(total>100?"其中前100条如下":"")+"，查询时间"+time+"毫秒。点击执行按钮将删除数据。";
             log.info("sql{}:" + msg, sql);
             return dbResult.setSql(sql).setCode(1000).setSqlType(sqlType.name()).setMsg(msg).setMap(dbResult.getMap()).setData(null).setTitle(listKey);
         } catch (JSQLParserException e) {
-            log.error("查询sql:{}执行出错{}", sql, SqlParserTool.getSqlEcception(e));
             return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg(SqlParserTool.getSqlEcception(e));
         }
     }

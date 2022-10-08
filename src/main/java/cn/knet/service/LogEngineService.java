@@ -8,9 +8,7 @@ import cn.knet.util.EasyExcelUtils;
 import cn.knet.util.NoModelWriteData;
 import cn.knet.util.UUIDGenerator;
 import cn.knet.vo.*;
-import com.alibaba.excel.util.DateUtils;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,10 +46,10 @@ public class LogEngineService {
      */
     public DbResult logSava(KnetSqlLog logs,List<KnetSqlLogDetail> details)  {
         DbResult result = new DbResult();
-        String insertSql = "INSERT INTO KNET_SQL_LOG (ID,SQL,TYPE,OP_TYPE,USER_ID,SQL_RESU) VALUES (?,?,?,?,?,?)";
+        String insertSql = "INSERT INTO KNET_SQL_LOG (ID,SQL,TYPE,OP_TYPE,USER_ID,SQL_RESU,sigo) VALUES (?,?,?,?,?,?,?)";
         log.info("日志保存数据为：{}",logs);
         logs.setId(UUIDGenerator.getUUID());
-        jdbcTemplate.update(insertSql, logs.getId(),logs.getSql(),logs.getType(),logs.getOpType(),logs.getUserId(),logs.getSqlResu());
+        jdbcTemplate.update(insertSql, logs.getId(),logs.getSql(),logs.getType(),logs.getOpType(),logs.getUserId(),logs.getSqlResu(),logs.getSigo());
         result.setCode(1000);
         result.setMsg("插入成功");
         if(!details.isEmpty()){
@@ -62,8 +60,8 @@ public class LogEngineService {
                     public void setValues(PreparedStatement ps, int i) throws SQLException {
                         ps.setString(1, UUIDGenerator.getUUID());
                         ps.setString(2, logs.getId());
-                        ps.setString(3, StringUtils.isNotBlank(details.get(i).getNow())?JSON.parse(details.get(i).getNow()).toString():"");
-                        ps.setString(4, StringUtils.isNotBlank(details.get(i).getOld())?JSON.parse(details.get(i).getOld()).toString():"");
+                        ps.setString(3, StringUtils.isNotBlank(details.get(i).getNow())?details.get(i).getNow():"");
+                        ps.setString(4, StringUtils.isNotBlank(details.get(i).getOld())?details.get(i).getOld():"");
                         ps.setString(5, details.get(i).getSql());
                         ps.setString(6, details.get(i).getOpType());
                         ps.setString(7, details.get(i).getSqlResu());
@@ -75,7 +73,7 @@ public class LogEngineService {
                 });
                 log.info("日志详情共：{}条",details.size());
             } catch (DataAccessException e) {
-                jdbcTemplate.update(detailsSql,UUIDGenerator.getUUID(),logs.getId(),"因为次sql涉及长字段不给予存储","因为次sql涉及长字段不给予存储");
+                jdbcTemplate.update(detailsSql,UUIDGenerator.getUUID(),logs.getId(),"因为本次sql涉及长字段不给予存储","因为本次sql涉及长字段不给予存储",logs.getSql(),logs.getOpType(),"");
                 e.printStackTrace();
             }
         }
@@ -95,11 +93,11 @@ public class LogEngineService {
         logs.setId(UUIDGenerator.getUUID());
         String detail ="";
         if(logs.getSqlDetail()!=null&&logs.getSqlDetail().size()>0){
-            detail= JSONArray.toJSON(logs.getSqlDetail()).toString();
+            detail=new Gson().toJson(logs.getSqlDetail());
         }
         String title ="";
         if(logs.getTitle()!=null&&logs.getTitle().size()>0){
-            title= JSONArray.toJSON(logs.getTitle()).toString();
+            title=new Gson().toJson(logs.getTitle());
         }
         jdbcTemplate.update(insertSql, logs.getId(),logs.getSql(),logs.getType(),logs.getUserId(),logs.getSqlResu(),detail,title);
         result.setCode(1000);
@@ -113,10 +111,9 @@ public class LogEngineService {
      * @return
      */
     public DbResult logDownload(KnetSqlDownload download) {
-        String insertSql = "INSERT INTO KNET_SQL_DOWNLOAD (ID,USER_ID,SIGO,EMAIL,COPY_EMAIL,DOWNLOAD_URL,SQL,type) VALUES (?,?,?,?,?,?,?,?)";
-        log.info("sql保存数据为：{}",download);
+        String insertSql = "INSERT INTO KNET_SQL_DOWNLOAD (ID,USER_ID,SIGO,EMAIL,COPY_EMAIL,DOWNLOAD_URL,SQL,type,title) VALUES (?,?,?,?,?,?,?,?,?)";
         jdbcTemplate.update(insertSql, UUIDGenerator.getUUID(),
-                download.getUserId(),download.getSigo(),download.getEmail(),download.getCopyEmail(),download.getDownloadUrl(),download.getSql(),download.getType());
+                download.getUserId(),download.getSigo(),download.getEmail(),download.getCopyEmail(),download.getDownloadUrl(),download.getSql(),download.getType(),download.getTitle());
         return  new DbResult(1000,"保存成功");
     }
     /**
@@ -127,7 +124,6 @@ public class LogEngineService {
      */
     public DbResult logShare(KnetSqlShare share) {
         String insertSql = "INSERT INTO KNET_SQL_SHARE (ID,SQL,STOR_TYPE,TITLE,USER_ID,type) VALUES (?,?,?,?,?,?)";
-        log.info("sql保存数据为：{}",share);
         try {
             jdbcTemplate.update(insertSql, UUIDGenerator.getUUID(),share.getSql(),share.getStorType(),share.getTitle(),share.getUserId(),share.getType());
         } catch (DataAccessException e) {
@@ -213,7 +209,15 @@ public class LogEngineService {
         d.setHeadMap(strs);
         d.setDataStrMap(strs);
         d.setDataList(list);
-        d.setPassword(DateUtils.format(new Date(),DateUtils.DATE_FORMAT_14)+new Random().nextInt(100));
+        String str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        Random random = new Random();
+        StringBuffer sb = new StringBuffer();
+
+        for (int i = 0; i < 10; ++i) {
+            //int number = random.nextInt(62);// [0,62)
+            sb.append(str.charAt(random.nextInt(62)));
+        }
+        d.setPassword(sb.toString());
         EasyExcelUtils easyExcelUtils = new EasyExcelUtils();
         easyExcelUtils.noModleWrite(os,d);
         long excendTime=System.currentTimeMillis(); //获取结束时间
@@ -231,7 +235,7 @@ public class LogEngineService {
         //保存下载
         this.logDownload(sqllog);
         //保存导出结果
-        return new DbResult(1000,"已发送邮件密码："+d.getPassword());
+        return new DbResult(1000,d.getPassword());
     }
 
     private String updateFile(ByteArrayOutputStream os,KnetSqlDownload sqllog){

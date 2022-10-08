@@ -29,11 +29,12 @@ spring:
         time-between-eviction-runs-millis: 180000
         num-tests-per-eviction-run: 3
         min-evictable-idle-time-millis: 180000
+        remove-abandoned-on-borrow: true
+        remove-abandoned-timeout: 60
       type: org.apache.commons.dbcp2.BasicDataSource
     seal:
-      driver-class-name: com.p6spy.engine.spy.P6SpyDriver
-      #oracle.jdbc.driver.OracleDriver
-      url: jdbc:p6spy:oracle:thin:@seal.db.knet.cn:1523:portal
+      driver-class-name: oracle.jdbc.driver.OracleDriver
+      url: jdbc:oracle:thin:@seal.db.knet.cn:1523:portal
       username: kx_seal
       password: cnnic
       dbcp2:
@@ -48,4 +49,17 @@ spring:
         time-between-eviction-runs-millis: 180000
         num-tests-per-eviction-run: 3
         min-evictable-idle-time-millis: 180000
+        remove-abandoned-on-borrow: true
+        remove-abandoned-timeout: 8
       type: org.apache.commons.dbcp2.BasicDataSource
+#      oracleucp:
+#        max-idle-time: 8
+#        min-pool-size: 20
+#      tomcat:
+#        remove-abandoned: true
+#        remove-abandoned-timeout: 8
+#        time-between-eviction-runs-millis: 300000
+#        min-evictable-idle-time-millis: 300000
+#        test-on-return: true
+#        test-on-connect: true
+#        test-on-borrow: true

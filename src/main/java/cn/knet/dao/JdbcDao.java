@@ -133,6 +133,9 @@ private static int UPDATESELECTCOUNT=100;//更新操作只查询出100条数据�
      */
     public static String getPageSql(String sql,int pageNumber,int count){
         int startNum=(pageNumber-1)*PAGESIZE;
+        if(pageNumber==1&&count<pageNumber*PAGESIZE){
+            return sql;
+        }
         int total=PAGESIZE*pageNumber;
         if(count<total&&count>=startNum){
             return "SELECT * FROM ( SELECT ROWNUM NUM,TMP.*  FROM (" + sql +" ) TMP WHERE ROWNUM <="+count+") WHERE NUM > "+startNum+"";

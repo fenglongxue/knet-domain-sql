@@ -25,10 +25,10 @@ public class ExcService {
      * @param userId
      * @return
      */
-    public DbResult delete(String sql,String type,String userId) {
+    public DbResult delete(String sql,String type,String userId,String sigo) {
             DbResult dbResult=updateService.delete(sql,type,SqlType.DELETE,false);
             if(dbResult.getCode()==1000){
-            logEngineService.logSava(new KnetSqlLog(sql,type,SqlType.DELETE.name(),dbResult.getMsg(), userId),dbResult.getLogDetails());
+            logEngineService.logSava(new KnetSqlLog(sql,type,SqlType.DELETE.name(),dbResult.getMsg(), userId,sigo),dbResult.getLogDetails());
             }
             return dbResult;
     }
@@ -37,10 +37,10 @@ public class ExcService {
      * @param sql
      * @return
      */
-    public DbResult update(String sql,String type,String userId) {
+    public DbResult update(String sql,String type,String userId,String sigo) {
         DbResult dbResult=updateService.update(sql,type,false);
         if(dbResult.getCode()==1000){
-            logEngineService.logSava(new KnetSqlLog(sql, type,SqlType.UPDATE.name(),dbResult.getMsg(), userId),dbResult.getLogDetails());
+            logEngineService.logSava(new KnetSqlLog(sql,type,SqlType.UPDATE.name(),dbResult.getMsg(), userId,sigo),dbResult.getLogDetails());
         }
         return dbResult;
     }

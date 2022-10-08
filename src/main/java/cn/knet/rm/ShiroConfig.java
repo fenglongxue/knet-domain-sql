@@ -47,7 +47,7 @@ public  class ShiroConfig {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
         sessionManager.setGlobalSessionTimeout(300*60*1000);
         sessionManager.setSessionIdCookieEnabled(true);
-        sessionManager.setSessionIdCookie(new SimpleCookie("task"));
+        sessionManager.setSessionIdCookie(new SimpleCookie("sql"));
         sessionManager.setCacheManager(ehCacheManager());
         defaultWebSecurityManager.setSessionManager(sessionManager);
         //关联缓存管理

@@ -4,14 +4,15 @@ import cn.knet.enums.SqlType;
 import cn.knet.service.ExcService;
 import cn.knet.service.PlUpdateService;
 import cn.knet.service.RunService;
-import cn.knet.service.UpdateService;
 import cn.knet.util.SqlFormatUtil;
 import cn.knet.vo.DbResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -68,7 +69,7 @@ public class SqlController extends SuperController {
      */
     @RequestMapping(value = "/updateExc", method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
-    public List<DbResult> updateExc(HttpServletRequest request,String type,String sqlType) {
+    public List<DbResult> updateExc(HttpServletRequest request,String type,String sqlType,String sigo) {
         List<DbResult> list = new ArrayList<>();
         String[] sqls = request.getParameterValues(SQLS);
         if (null == sqls || sqls.length <= 0) {
@@ -85,9 +86,9 @@ public class SqlController extends SuperController {
             dbResult.setSql(sql);
             if (dbResult.getCode() == 1000) {
                 if (sqlType.equalsIgnoreCase(SqlType.UPDATESELECT.name())) {
-                    list.add(excService.update(sql,type,getCurrentLoginUser().getId()));
+                    list.add(excService.update(sql,type,getCurrentLoginUser().getId(),sigo));
                 } else {
-                    list.add(excService.delete(sql,type,getCurrentLoginUser().getId()));
+                    list.add(excService.delete(sql,type,getCurrentLoginUser().getId(),sigo));
                 }
             } else {
                 list.add(dbResult);
@@ -104,13 +105,13 @@ public class SqlController extends SuperController {
      */
     @RequestMapping(value = "/plUpdate", method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
-    public List<DbResult> updateForPl(String type,HttpServletRequest request) throws IOException, EncodeException {
+    public List<DbResult> updateForPl(String type,HttpServletRequest request,String sigo) throws IOException, EncodeException {
         List<DbResult> list = new ArrayList<>();
         String[] sqls = request.getParameterValues(SQLS);
         if (null == sqls || sqls.length <= 0) {
             list.add(DbResult.error(1002, MSG));
             return list;
         }
-        return plUpdateService.updateAnalysisEngine(type,getCurrentLoginUser().getId(),sqls);
+        return plUpdateService.updateAnalysisEngine(type,getCurrentLoginUser().getId(),sqls,sigo);
     }
 }

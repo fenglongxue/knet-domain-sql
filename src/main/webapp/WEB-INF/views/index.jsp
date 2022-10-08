@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="${ctx}/ui/codemirror/codemirror.css"/>
 <%--    <link rel="stylesheet" href="${ctx}/ui/codemirror/hint/show-hint.css"/>--%>
     <link rel="stylesheet" href="${ctx}/ui/css/sql.css"/>
+    <link rel="shortcut icon" href="${ctx}/ui/favicon.ico">
 
     <script>
         var commonCtx = '${ctx}';
@@ -71,8 +72,7 @@
                     <ul id="tabTitle">
                     </ul>
                     <div class="handlerBtn">
-                        <div class="hbtn" id="narrowBtn"><i class="layui-icon">&#xe67e;</i></div>
-                        <div class="hbtn" id="Maximize"><i class="layui-icon">&#xe624;</i></div>
+                        <div class="hbtn layui-layer-ico layui-layer-max" id="narrowBtn"></div>
                         <div class="hbtn btn-close" id="closeBtn"><i class="layui-icon">&#xe65a;</i></div>
                     </div>
                 </div>
@@ -103,7 +103,7 @@
         </div>
     </div>
 </div>
-
+<div id="sqlloading"></div>
 <script src="${pageContext.request.contextPath}/ui/layui/layui.js?t=1629677917965" charset="utf-8"></script>
 <script src="${ctx}/ui/codemirror/codemirror.js"></script>
 <script src="${ctx}/ui/codemirror/matchbrackets.js"></script>

@@ -47,6 +47,19 @@ public class KnetSqlLog implements Serializable {
      */
     @TableField("SQL_RESU")
     private String sqlResu;
+    /**
+     * 签报号
+     */
+    @TableField("SIGO")
+    private String sigo;
+    public KnetSqlLog(String sql, String type, String opType,String sqlResu,String userId,String sigo) {
+        this.sql = sql;
+        this.type = type;
+        this.opType = opType;
+        this.userId = userId;
+        this.sqlResu=sqlResu;
+        this.sigo=sigo;
+    }
     public KnetSqlLog(String sql, String type, String opType,String sqlResu,String userId) {
         this.sql = sql;
         this.type = type;

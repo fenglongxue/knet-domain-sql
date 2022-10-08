@@ -5,31 +5,6 @@ var pageNumber = 1;
 var editor;
 var pageNumberRight = 1;
 var pageSize = 50;
-window.onload = function () {
-    editor = CodeMirror.fromTextArea(document.getElementById('code'), {
-        mode: "text/x-plsql",
-        indentWithTabs: true,
-        smartIndent: true,
-        lineNumbers: true,
-        matchBrackets: true,
-        autofocus: true,
-        extraKeys:{
-            "F7": function autoFormat(editor) {
-                var totalLines = editor.lineCount();
-                editor.autoFormatRange({line:0, ch:0}, {line:totalLines});
-            }
-        }
-    });
-    editor.setSize("", "calc( 100vh - 30px )");
-    // editor.on("keyup", function (cm) {
-    //     CodeMirror.showHint(cm, CodeMirror.hint.deluge, {completeSingle: false});
-    // });
-};
-
-var tab = $('#resContent');
-tab.removeClass('closeTab').css('height','300px');
-$('#closeBtn i').html('&#x1006;');
-
 
 const sqlexc = commonCtx+'/sql/exc',
     logshare = commonCtx+'/log/share',
@@ -81,7 +56,8 @@ var sqlInit = {
                 sqlInit.batchUpdate();
             });
         } else {
-            layer.load(2);
+            sqlInit.loadingMsg('正在运行，请稍等……');
+
             sqlInit.sqlTypeInput = sqlType;
             sqlInit.tabTitle= [];
 
@@ -93,9 +69,8 @@ var sqlInit = {
                 type: "POST",
                 data: {sqls:sqlArr, type: sqlType, pageNumber: pageNumber },
                 success: function (data) {
-                    var tab = $('#resContent');
-                    tab.removeClass('closeTab').css('height','300px');
-                    $('#closeBtn i').html('&#x1006;');
+
+                    sqlInit.bottomHeight();
 
                     layer.closeAll();
                     $.each(data,function (i,v){
@@ -118,6 +93,7 @@ var sqlInit = {
             });
         }
     },
+    //批量
     batchUpdate: function (){
         var sqlType = $('#sqlType').val();
         var sqlCode = editor.getValue();
@@ -127,28 +103,51 @@ var sqlInit = {
         var sqlArr = sqlArrk.filter(function (s) {
             return s && s.trim();
         });
-
-        layer.load(2);
+        // layer.load(2);
         sqlInit.sqlTypeInput = sqlType;
         sqlInit.tabTitle= [];
 
-        var tab = $('#resContent');
-        tab.removeClass('closeTab').css('height','300px');
-        $('#closeBtn i').html('&#x1006;');
+        sqlInit.bottomHeight();
 
-        $.ajax({
-            url: updateListForSelect,
-            type: "POST",
-            data: {sqls:sqlArr, type: sqlType },
-            success: function (data) {
-                layer.closeAll();
-                sqlInit.getbatchUpdate(data);
-            },
-            error: function (){
-                layer.closeAll();
-                layer.msg('服务端错误');
+        var thtml = '';
+        sqlInit.tabTitle.push( { sql:'', title: 'batchUpdate' } );
+        //表格
+        thtml += '<div class="layui-tab-item layui-show"><div class="sql-p10" id="pldata"><div id="plCont">';
+
+        // $.each(data,function (i,v){
+        //     thtml += '<p>'+v.msg+'<span>'+v.sql+'</span></p>';
+        // })
+
+        thtml += '</div></div></div>';
+        $('#result').html(thtml);
+
+        layer.closeAll();
+
+        layer.open({
+            type: 0,
+            title: '请输入签报号',
+            content: '<input type="text" id="layuiSigo" class="layui-input layuiSigo" maxlength="30">',
+            yes: function(){
+                sqlInit.loadingMsg('正在更新，请稍等……');
+                openSocket();
+                $.ajax({
+                    url: updateListForSelect,
+                    type: "POST",
+                    data: {sqls:sqlArr, type: sqlType , sigo: $('#layuiSigo').val() },
+                    success: function (data) {
+                        layer.closeAll();
+
+                        //导航
+                        sqlInit.getTitle(sqlInit.tabTitle);
+                    },
+                    error: function (){
+                        layer.closeAll();
+                        layer.msg('服务端错误');
+                    }
+                });
             }
         });
+
     },
     getTitle: function (tabTitle){
         let html = '';
@@ -210,12 +209,14 @@ var sqlInit = {
         //取出键值
         var thisTitle = [];
 
-        thtml += '<div class="tableBox'+(dindex+1)+'"><table class="layui-table" id="table'+(dindex+1)+'" lay-size="sm" lay-filter="table'+(dindex+1)+'">';
+        thtml += '<div class="tableBox'+(dindex+1)+'">';
+        //
+        thtml+='<table class="layui-table" id="table'+(dindex+1)+'" lay-size="sm" lay-filter="table'+(dindex+1)+'">';
         //循环表头
         thtml += '<thead><tr>';
         $.each(dvalue.title,function (i,v){
             thisTitle.push( v );
-            var aa = v == 'NUM'? "{field:'"+v+"',width:60}" : "{field:'"+v+"',width:150}";
+            var aa = v == 'NUM'? "{field:'"+v+"',width:60}" : "{field:\""+String(v)+"\",width:150}";
 
             thtml +='<th lay-data='+aa+'>'+v+'</th>'
         })
@@ -233,9 +234,9 @@ var sqlInit = {
             })
             thtml+='</tr>';
         })
-        thtml += '</tbody></table></div>';
-        thtml += '</div>';
-
+        thtml += '</tbody>';
+        thtml += '</table>';
+        thtml += '</div></div>';
         $('#result').append(thtml);
 
         //导航
@@ -247,7 +248,7 @@ var sqlInit = {
             limit: Number.MAX_VALUE
         });
     },
-    getupdateData: function (dvalue,dindex){
+    getupdateData: function (dvalue,dindex,sqltypes){
         sqlInit.tabTitle.push( { sql:dvalue.sql, title: dvalue.sqlType } );
         var thtml = '';
         //表格
@@ -258,7 +259,7 @@ var sqlInit = {
 
             if( dvalue.code == 1000 ){
                 thtml+='<div class="layui-btn-group">';
-                thtml+='    <button type="button" class="layui-btn layui-btn-primary layui-btn-xs" onclick=sqlInit.logUpdateExc('+dindex+',this)><i class="layui-icon"> &#xe605;</i>执行</button>';
+                thtml+='    <button type="button" class="layui-btn layui-btn-primary layui-btn-xs" onclick="sqlInit.logUpdateExc('+dindex+',this, \''+dvalue.sqlType+'\', \''+dvalue.count+'\')"><i class="layui-icon"> &#xe605;</i>执行</button>';
                 thtml+='         <button type="button" class="layui-btn layui-btn-primary layui-btn-xs" onclick=sqlInit.logCollection('+dindex+',"SAVE")><i class="layui-icon"> &#xe658;</i>收藏sql</button>';
                 thtml+='         <button type="button" class="layui-btn layui-btn-primary layui-btn-xs" onclick=sqlInit.logCollection('+dindex+',"SHARE")><i class="layui-icon"> &#xe641;</i>分享sql</button>';
                 thtml+='</div>';
@@ -269,7 +270,7 @@ var sqlInit = {
             //循环表头
             thtml += '<thead><tr>';
             $.each(dvalue.title,function (i,v){
-                var aa = v == 'NUM'? "{field:'"+v+"',width:60}" : "{field:'"+v+"',width:150}";
+                var aa = v == 'NUM'? "{field:'"+v+"',width:60}" : "{field:\""+String(v)+"\",width:150}";
                 thtml +='<th lay-data='+aa+'>'+v+'</th>'
             })
             thtml+='</tr></thead><tbody>';
@@ -332,32 +333,16 @@ var sqlInit = {
         //导航
         sqlInit.getTitle(sqlInit.tabTitle);
     },
-    //批量更新
-    getbatchUpdate: function (data){
-        var thtml = '';
-        sqlInit.tabTitle.push( { sql:'', title: 'batchUpdate' } );
-        //表格
-        thtml += '<div class="layui-tab-item layui-show"><div class="sql-p10">';
-
-        $.each(data,function (i,v){
-            thtml += '<p>'+v.msg+'<span>'+v.sql+'</span></p>';
-        })
-
-        thtml += '</div></div>';
-        $('#result').html(thtml);
-
-        //导航
-        sqlInit.getTitle(sqlInit.tabTitle);
-    },
     //底部收起
     domShow:function () {
         var tab = $('#resContent');
         if( tab.hasClass('closeTab') ){
-            tab.removeClass('closeTab').css('height','300px');
-            $('#closeBtn i').html('&#x1006;');
+            sqlInit.bottomHeight();
         } else {
             tab.addClass('closeTab').css('height','30px');
             $('#closeBtn i').html('&#xe65a;');
+            editor.setSize("", "calc( 100vh - 30px )");
+            $('#narrowBtn').removeClass('active');
         }
     },
     logCollection: function ( tindex , storType ){
@@ -387,7 +372,7 @@ var sqlInit = {
         var html = '<div class="layui-form">';
         html+='<input id="sigo" type="text" class="layui-layer-input" value="" placeholder="请输入钉钉签报号" lay-verify="required" autocomplete="off">';
         html+='<input id="email" style="margin-top:10px;" type="text" class="layui-layer-input" value="" placeholder="请输入接收邮箱" lay-verify="email" autocomplete="off">';
-        html+='<input id="copyEmail" style="margin-top:10px;" type="text" class="layui-layer-input" value="" placeholder="请输入抄送邮箱" lay-verify="email" autocomplete="off">';
+        html+='<input id="copyEmail" style="margin-top:10px;" type="text" class="layui-layer-input" value="" placeholder="请输入抄送邮箱" autocomplete="off">';
         html+='<input id="impTitle" style="margin-top:10px;" type="text" class="layui-layer-input" value="" placeholder="请输入标题" lay-verify="required" autocomplete="off">';
         html+='<button type="submit" id="logExportBtn" class="layui-btn layui-btn-sm layui-btn-normal export-btn" lay-submit="" lay-filter="logExportBtn">确定</button>';
         html+='</div>';
@@ -406,32 +391,74 @@ var sqlInit = {
                 type: sqlInit.sqlTypeInput,
                 sigo: $('#sigo').val(),
                 title: $('#impTitle').val(),
-                email: $('#email').val(),
+                email: $.trim($('#email').val()),
                 copyEmail: $('#copyEmail').val()
             };
             layer.closeAll();
-            layer.load(2);
+            // layer.load(2);
+            sqlInit.loadingMsg('数据导出中，请稍等……');
+
             $.post( logImp, thisData , function (data) {
                 layer.closeAll();
                 if( data.code == 1000 ){
-                    layer.alert(data.msg);
+                    layer.alert('邮件密码：<input type="text" id="the" value="'+data.msg+'" class="exportPwd" readonly />',function (){
+                        const inputElement = document.querySelector('#the');
+                        inputElement.select();
+                        document.execCommand('copy');
+                        layer.msg('邮件密码已复制！');
+                    });
                 }
             })
             return false;
         });
     },
     //执行
-    logUpdateExc: function ( tindex , that){
+    logUpdateExc: function ( tindex , that , tsqlType, tcount){
+        layer.open({
+            type: 0,
+            title: '请输入签报号',
+            content: '<input type="text" id="layuiSigo" class="layui-input layuiSigo" maxlength="30">',
+            yes: function(){
+                var sigoval = $('#layuiSigo').val();
+
+                if( tsqlType == 'DELETESELECT' ){
+                    layer.confirm('该操作将删除'+tcount+'条数据，是否确认？', {
+                        btn: ['确认','取消']
+                    }, function(){
+                        layer.closeAll();
+                        sqlInit.loadingMsg('正在删除，请稍等……');
+
+                        sqlInit.deleteSqldata( tindex , that , sigoval );
+                    });
+                } else {
+                    layer.closeAll();
+                    sqlInit.loadingMsg('正在执行，请稍等……');
+
+                    sqlInit.deleteSqldata( tindex , that , sigoval );
+                }
+            }
+        });
+    },
+    deleteSqldata: function ( tindex , that , layuiSigo){
         var sqls = [sqlInit.tabTitle[tindex].sql];
 
-        $.post( updateExc, {sqls: sqls, type: sqlInit.sqlTypeInput , sqlType:sqlInit.tabTitle[tindex].title }, function (data) {
-            if( data[0].code == 1000 ){
-                $(that).parents('.sql-title').find('.sql-tip').html(data[0].msg);
-            } else {
-                $(that).parents('.sql-title').find('.sql-tip').html('执行失败！')
+        $.ajax({
+            url: updateExc,
+            type: "POST",
+            data: {sqls: sqls, type: sqlInit.sqlTypeInput , sqlType:sqlInit.tabTitle[tindex].title, sigo: layuiSigo },
+            success: function (data) {
+                layer.closeAll();
+                if( data[0].code == 1000 ){
+                    $(that).parents('.sql-title').find('.sql-tip').html(data[0].msg);
+                } else {
+                    $(that).parents('.sql-title').find('.sql-tip').html('执行失败！')
+                }
+            },
+            error: function (){
+                layer.closeAll();
+                layer.msg('服务端错误');
             }
-        })
-
+        });
         $(that).parents('.layui-tab-item').find('.layui-table').remove();
         $(that).hide();
     },
@@ -492,7 +519,7 @@ var sqlInit = {
                 //循环表头
                 thtml += '<thead><tr>';
                 $.each(data[0].title,function (i,v){
-                    var aa = v == 'NUM'? "{field:'"+v+"',width:60}" : "{field:'"+v+"',width:150}";
+                    var aa = v == 'NUM'? "{field:'"+v+"',width:60}" : "{field:\""+String(v)+"\",width:150}";
                     thtml +='<th lay-data='+aa+'>'+v+'</th>'
                 })
                 thtml+='</tr></thead><tbody>';
@@ -584,13 +611,56 @@ var sqlInit = {
             })
         });
     },
+    bottomHeight: function (){
+        var tab = $('#resContent');
+        var rh = $(document).height()/2;
+        tab.removeClass('closeTab').css('height',rh);
+        $('#closeBtn i').html('&#xe67e;');
+        editor.setSize("", rh-30);
+        tab.find('#resGroup').css('height',rh);
+
+        $('#narrowBtn').removeClass('active');
+    },
+    //正在加载弹框
+    loadingMsg: function (tit){
+        layer.msg(tit+'(<span></span>s)', {
+            icon: 16
+            ,time: 90000000
+            ,shade: 0.1
+            ,success: function(layero,index){
+                var timeNum = 1, setText = function(start){
+                    layero.find('.layui-layer-padding').find('span').html((start ? timeNum : ++timeNum) + '')
+                };
+                setText(!0);
+                this.timer = setInterval(setText, 1000);
+                if(timeNum <= 0) clearInterval(this.timer);
+            }
+        });
+    }
 }
 
 $(function(){
-    openSocket();
+    editor = CodeMirror.fromTextArea(document.getElementById('code'), {
+        mode: "text/x-plsql",
+        indentWithTabs: true,
+        smartIndent: true,
+        lineNumbers: true,
+        matchBrackets: true,
+        autofocus: true,
+        extraKeys:{
+            "F7": function autoFormat(editor) {
+                var totalLines = editor.lineCount();
+                editor.autoFormatRange({line:0, ch:0}, {line:totalLines});
+            }
+        }
+    });
+    editor.setSize("", "calc( 100vh - 30px )");
+    // editor.on("keyup", function (cm) {
+    //     CodeMirror.showHint(cm, CodeMirror.hint.deluge, {completeSingle: false});
+    // });
+
     //运行
     $('#check').on('click',sqlInit.check);
-    // $('#batchUpdate').on('click',sqlInit.batchUpdate);
 
     //底部关闭按钮
     $('#closeBtn').on('click',sqlInit.domShow);
@@ -613,8 +683,7 @@ $(function(){
             sqlInit.getlogList(selval,inpval);
         }
     });
-    //底部拖动
-    // var drag = new Drag();
+    // sqlInit.bottomHeight();
 
     //右侧列表更多
     $('#morelist').on('click',function (){
@@ -639,25 +708,29 @@ $(function(){
         }
     })
 
-    // 最大化
-    $('#Maximize').on('click',function (){
-        var resContent = $('#resContent');
-        var rh = $(document).height() - 30;
-
-        resContent.height(rh);
-        $('#resGroup').height(rh);
-        $('.layui-table-view').css({'height':rh-60});
-        $('.layui-table-body').css({'height':rh-95});
-    })
-    // 最小化
+    // 缩放按钮
     $('#narrowBtn').on('click',function (){
         var resContent = $('#resContent');
-        var rh = 300;
+        var rh = $(document).height()/2;
 
-        resContent.height(rh);
-        $('#resGroup').height(rh);
-        $('.layui-table-view').css({'height':rh-60});
-        $('.layui-table-body').css({'height':rh-95});
+        resContent.removeClass('closeTab');
+        $('#closeBtn i').html('&#xe67e;');
+
+        if( $('#resContent').height() >= rh ){
+            resContent.height(rh);
+            $('#resGroup').height(rh);
+            $('.layui-table-view').css({'height':rh-60});
+            $('.layui-table-body').css({'height':rh-95});
+            $(this).removeClass('active');
+            editor.setSize("", rh-30);
+        } else {
+            var maxminh = $(document).height() - 30;
+            resContent.height(maxminh);
+            $('#resGroup').height(maxminh);
+            $('.layui-table-view').css({'height':maxminh-60});
+            $('.layui-table-body').css({'height':maxminh-95});
+            $(this).addClass('active');
+        }
     })
 })
 var socket;
@@ -668,7 +741,7 @@ function openSocket() {
         console.log("您的浏览器支持WebSocket");
         //实现化WebSocket对象，指定要连接的服务器地址与端口  建立连接
         var socketUrl="ws://"+window.location.host+"/ws/"+userId;;
-        console.log(socketUrl);
+        // console.log(socketUrl);
         if(socket!=null){
             socket.close();
             socket=null;
@@ -679,11 +752,14 @@ function openSocket() {
             console.log("websocket已打开");
         };
         //获得消息事件
-        socket.onmessage = function(msg) {
-            console.log(msg.data);
-            //console.log(JSON.parse(msg.data).sql);
+        socket.onmessage = function(res) {
+            // console.log(res);
+            // console.log(JSON.parse(msg.data));
             //发现消息进入    开始处理前端触发逻辑
-
+            if( res.data != '连接成功' ){
+                $('#plCont').append("<p>"+JSON.parse(res.data).msg+"<span>"+JSON.parse(res.data).sql+"</span>"+"</p>")
+            }
+            $('#pldata').scrollTop($('#plCont').height())
         };
         //关闭事件
         socket.onclose = function() {

@@ -63,6 +63,28 @@ private static final String CZLXMSG = "目前的操作类型是";
         return DbResult.error(1002, "格式错误，无匹配的操作类型！",sql);
     }
     /***
+     * 校验是否是注释语句
+     * @param sql
+     * @return
+     */
+    public static DbResult sqlAnnotation(String sql) {
+        if(sql.indexOf("--") == -1){
+            return DbResult.success(1000, "").setSql(sql);
+        }
+        sql = sql.replaceAll("\n"," \n");
+        String sqlSub = "";
+        String[] split = sql.split("\n");
+        for (String x:split){
+            int xs = x.indexOf("--");
+            if(x.indexOf("--") != -1){
+                sqlSub += x.substring(0,x.indexOf("--"));
+            }else{
+                sqlSub += x;
+            }
+        }
+        return DbResult.success(1000, "").setSql(sqlSub);
+    }
+    /***
      * sql校验
      * 格式  类型 表名等
      * @param sql
@@ -71,7 +93,12 @@ private static final String CZLXMSG = "目前的操作类型是";
      */
     public static DbResult sqlVaildate(String sql,String type){
         try {
-            DbResult result = SqlFormatUtil.sqlTypeFormat(sql);
+            DbResult result = SqlFormatUtil.sqlAnnotation(sql);
+            sql=result.getSql();
+            if (null == result || result.getCode() != 1000) {
+                return DbResult.error(1002, "注释语句不执行！" + result.getMsg(), sql);
+            }
+            result = SqlFormatUtil.sqlTypeFormat(sql);
             if (null == result || result.getCode() != 1000) {
                 return DbResult.error(1002, "sql校验出错！" + result.getMsg(), sql);
             }
@@ -111,114 +138,4 @@ private static final String CZLXMSG = "目前的操作类型是";
         return DbResult.error(1002,"校验出错:"+SqlParserTool.getSqlEcception(e), sql);
     }
     }
-    /*  /***
-     * 更新操作的校验
-     * @param sql
-     * @return
-     *//*
-    public static DbResult updateValidate(String sql){
-        String table = null;
-            log.info("更新执行的sql:{}", sql);
-            try {
-                SqlType sqlType= SqlParserTool.getSqlType(sql);
-                if(!sqlType.equals(SqlType.UPDATE)) return DbResult.error(1002, "更新校验出错:"+sql+CZLXMSG+sqlType+",不是更新数据类型，不支持！",sql);
-                DbResult dbResult=commonVaildate(sql);
-                if(null==dbResult||dbResult.getCode()!=1000) return DbResult.error(1002, "更新校验出错",sql);
-                table=dbResult.getMsg();
-            } catch (JSQLParserException e) {
-                log.error("更新校验出错:校验出错{}", SqlParserTool.getSqlEcception(e));
-                return DbResult.error(1002,"更新校验出错:"+SqlParserTool.getSqlEcception(e), sql);
-            }
-        return DbResult.success(1000,table);
-    }*/
-
-   /***
-     * 表操作的校验
-     * @param sql
-     * @param type
-     * @return
-     *//*
-    public static DbResult alertValidate(String sql,String type) {
-                log.info("表操作执行的sql:{}", sql);
-                try {
-                SqlType sqlType=SqlParserTool.getSqlType(sql);
-                if(!(sqlType.equals(SqlType.COMMENT) ||sqlType.equals(SqlType.ALTER)||sqlType.equals(SqlType.DROP)||sqlType.equals(SqlType.CREATETABLE))){
-                    return DbResult.error(1002, sql+"表操作校验出错：目前的操作类型是"+sqlType+",不是表操作类型，不支持！",sql);
-                }
-                DbResult dbResult=commonVaildate(sql);
-                if(null==dbResult||dbResult.getCode()!=1000) return DbResult.error(1002, "表操作校验出错",sql);
-               String table=dbResult.getMsg();
-                if (sqlType.equals(SqlType.DROP)) {
-                    int count= SpringTools.getJdbcTemplate(type).queryForObject("SELECT count(*) FROM "+table, int.class);
-                    if (count>0) {
-                        log.error("表操作校验出错：数据表" + table + "中有数据，无法执行此操作！");
-                        return DbResult.error(1002, "表操作校验出错：数据表" + table + "中有"+count+"条数据，无法执行此操作！",sql);
-                    }
-                }
-                } catch (Exception e) {
-                    log.error("表操作校验出错：执行出错{}", SqlParserTool.getSqlEcception(e));
-                    return DbResult.error(1002,SqlParserTool.getSqlEcception(e),sql);
-                }
-        return DbResult.success(1000,"表操作校验通过！");
-    }
-
-    *//***
-     * 插入操作的校验
-     * @param sql
-     * @return
-     *//*
-    public static DbResult insertValidate(String sql) {
-        try {
-            log.info("插入执行的sql{}", sql);
-            SqlType sqlType=SqlParserTool.getSqlType(sql);
-            if(!sqlType.equals(SqlType.INSERT)){
-                return DbResult.error(1002, sql+CZLXMSG+sqlType+",不是插入类型，不支持！",sql);
-            }
-            DbResult dbResult=commonVaildate(sql);
-            if(null==dbResult||dbResult.getCode()!=1000) return DbResult.error(1002, "插入操作校验出错",sql);
-        } catch (Exception e) {
-            log.error("插入操作校验出错{}", SqlParserTool.getSqlEcception(e));
-            return DbResult.error(1002,SqlParserTool.getSqlEcception(e),sql);
-        }
-        return DbResult.success(1000,"插入操作校验通过！");
-    }
-
-    *//***
-     * 查询操作校验
-     * @param sql
-     * @return
-     *//*
-    public static DbResult queryValidate(String sql) {
-        try{
-            SqlType sqlType = SqlParserTool.getSqlType(sql);
-            if (!sqlType.equals(SqlType.SELECT)) {
-                return DbResult.error(1002, sql + CZLXMSG + sqlType + ",不是查询数据类型，不支持！",sql);
-            }
-        } catch (Exception e) {
-            log.error("查询操作校验出错{}", SqlParserTool.getSqlEcception(e),sql);
-            return DbResult.error(1002,SqlParserTool.getSqlEcception(e));
-        }
-        return DbResult.success(1000,"查询操作校验通过！");
-    }
-
-    *//***
-     * 删除操作
-     * @param sql
-     * @return
-     *//*
-    public static DbResult deleteValidate(String sql) {
-        try {
-            log.info("删除执行的sql{}", sql);
-            SqlType sqlType=SqlParserTool.getSqlType(sql);
-            if(!sqlType.equals(SqlType.DELETE)){
-                return DbResult.error(1002, sql+CZLXMSG+sqlType+",不是删除类型，不支持！",sql);
-            }
-            DbResult dbResult=commonVaildate(sql);
-            if(null==dbResult||dbResult.getCode()!=1000) return DbResult.error(1002, "删除操作校验出错",sql);
-        } catch (Exception e) {
-            log.error("删除操作校验出错{}", SqlParserTool.getSqlEcception(e));
-            return DbResult.error(1002,SqlParserTool.getSqlEcception(e),sql);
-        }
-        return DbResult.success(1000,"删除操作校验通过！");
-    }*/
 }

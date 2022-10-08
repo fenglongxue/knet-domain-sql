@@ -39,7 +39,7 @@ public class UpdateService {
             String table = SqlParserTool.getTableList(SqlParserTool.getStatement(sql)).get(0).toUpperCase();
             sqlEngine.alertAnalysisEngine(type, sql);
             long time = System.currentTimeMillis() - startTime;
-            String msg = "表" + table + "执行" + sqlType.name() + "操作成功" + table + "，执行时间" + time + "毫秒。";
+            String msg = "表" + table + "执行" + sqlType.name() + "操作成功，执行时间" + time + "毫秒。";
             log.info("sql{}:" + msg, sql);
             if(isPl){
                 List<KnetSqlLogDetail> details = new ArrayList<>();
@@ -48,7 +48,6 @@ public class UpdateService {
             }
             return new DbResult().setCode(1000).setMsg(msg).setSql(sql).setSqlType(sqlType.name());
         } catch (Exception e) {
-            log.error("sql:{}表操作执行出错{}", sql, SqlParserTool.getSqlEcception(e));
             return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg(SqlParserTool.getSqlEcception(e)).setSql(sql);
         }
     }
@@ -75,7 +74,6 @@ public class UpdateService {
             }
             return new DbResult().setCode(1000).setMsg(msg).setSql(sql).setSqlType(sqlType.name());
         } catch (Exception e) {
-            log.error("表插入sql:{}执行出错{}", sql, SqlParserTool.getSqlEcception(e));
             return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg(SqlParserTool.getSqlEcception(e)).setSql(sql);
         }
     }
@@ -91,30 +89,34 @@ public class UpdateService {
         try {
             String selectSql=CommUtils.getSelectByDeleteSql((Delete) SqlParserTool.getStatement(sql));
             int total=sqlEngine.queryCount(type,selectSql);
-            if(total<0){
-                return new DbResult().setCode(1002).setSql(sql).setMsg("将删除的数据为0条，请核对").setSqlType(sqlType.name());
-            }
-            if(isPl&&total>1){
-                return new DbResult().setCode(1002).setSql(sql).setMsg("将删除的数据为"+total+"条，不支持批量操作").setSqlType(sqlType.name());
-            }
             //保存删除日志的明细
             List<KnetSqlLogDetail> details = new ArrayList<>();
+            if(total<=0){
+                //批量更新要保存sql到明细中
+                if(isPl){
+                    details.add(new KnetSqlLogDetail().setSql(sql.replaceFirst("\n","")).setOpType(sqlType.name()));
+                }
+                return new DbResult().setCode(1002).setSql(sql).setMsg("共删除0条数据").setSqlType(sqlType.name()).setLogDetails(details);
+            }
+            if(isPl&&total>1){
+                details.add(new KnetSqlLogDetail().setSql(sql.replaceFirst("\n","")).setOpType(sqlType.name()));
+                return new DbResult().setCode(1002).setMsg("将删除"+total+"条数据，不支持批量操作").setSqlType(sqlType.name()).setLogDetails(details);
+            }
             if (total<=logCount) {
                 //保存日志要查询全部
                 DbResult dbResult = sqlEngine.queryDb(type,selectSql,-1);
                 if(dbResult.getData().isEmpty()){
                     log.error("查询sql:{}执行出错{}", sql,"将删除的数据为0条");
-                    return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg("将删除的数据为0条");
+                    return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg("共删除0条数据").setSql(sql);
                 }
                 dbResult.setMap(CommUtils.initOldMap(dbResult));
-                CommUtils.saveLogDetail(dbResult, details,isPl,sql,sqlType.name(), dbResult.getCount()+"条数据被成功从表" + SqlParserTool.getTableList(SqlParserTool.getStatement(sql)).get(0).toUpperCase() + "中删除，执行时间" +(System.currentTimeMillis()-startTime) + "毫秒。");
+                details=CommUtils.saveLogDetail(dbResult,isPl,sql,sqlType.name(),dbResult.getCount()+"条数据被成功从表" + SqlParserTool.getTableList(SqlParserTool.getStatement(sql)).get(0).toUpperCase() + "中删除，执行时间" +(System.currentTimeMillis()-startTime) + "毫秒。");
             }
             long time = System.currentTimeMillis() - startTime;
             String msg = sqlEngine.deleteAnalysisEngine(type, sql) + "条数据被成功从表" + SqlParserTool.getTableList(SqlParserTool.getStatement(sql)).get(0).toUpperCase() + "中删除，执行时间" + time + "毫秒。";
             log.info("sql{}:" + msg, sql);
             return new DbResult().setLogDetails(details).setCode(1000).setMsg(msg).setSql(sql).setSqlType(sqlType.name());
         } catch (JSQLParserException e) {
-            log.error("查询sql:{}执行出错{}", sql, SqlParserTool.getSqlEcception(e));
             return new DbResult().setSql(sql).setCode(1002).setSqlType(sqlType.name()).setMsg(SqlParserTool.getSqlEcception(e)).setSql(sql);
         }
     }
@@ -134,13 +136,18 @@ public class UpdateService {
             }
             String selectSql=CommUtils.getSelectByUpdateSql((Update) SqlParserTool.getStatement(sql), SpringTools.getJdbcTemplate(type));
             int total=sqlEngine.queryCount(type,selectSql);
-            if(total<0){
-                return new DbResult().setCode(1002).setSql(sql).setMsg("将更新数据条数为0，请核对").setSqlType(sqlType);
+            List<KnetSqlLogDetail> details=new ArrayList<>();
+            if(total<=0){
+                //批量更新要保存sql到明细中
+                if(isPl){
+                    details.add(new KnetSqlLogDetail().setSql(sql.replaceFirst("\n","")).setOpType(sqlType));
+                }
+                return new DbResult().setCode(1002).setSql(sql).setMsg("共更新0条数据").setSqlType(sqlType).setLogDetails(details);
             }
             if(isPl&&total>1){
-                return new DbResult().setCode(1002).setSql(sql).setMsg("将更新的数据为"+total+"条，不支持批量操作");
+                details.add(new KnetSqlLogDetail().setSql(sql.replaceFirst("\n","")).setOpType(sqlType));
+                return new DbResult().setCode(1002).setMsg("将更新"+total+"条数据，不支持批量操作").setLogDetails(details).setSql(sql);
             }
-            List<KnetSqlLogDetail> details=new ArrayList<>();
             //保存日志详情
             if(total<=logCount){
                 dbResult=sqlEngine.queryDb(type, selectSql,-1);//-1不分页 取全部
@@ -149,7 +156,7 @@ public class UpdateService {
                 if (null == dbResult.getMap()) {
                     return DbResult.error(1002,dbResult.getMsg(),sql).setSqlType(sqlType);
                 }
-                CommUtils.saveLogDetail(dbResult, details,isPl,sql,sqlType,
+                details=CommUtils.saveLogDetail(dbResult,isPl,sql,sqlType,
                         dbResult.getCount()+ "条数据被成功更新到表" + SqlParserTool.getTableList(SqlParserTool.getStatement(sql)).get(0).toUpperCase()+ "，执行时间" +(System.currentTimeMillis()-startTime)+ "毫秒。");
             }
             int i = sqlEngine.updateAnalysisEngine(type,sql);
@@ -158,7 +165,6 @@ public class UpdateService {
             log.info("sql{}:"+msg,sql);
             return new DbResult().setLogDetails(details).setCode(1000).setMsg(msg).setSql(sql).setSqlType(sqlType);
         } catch (Exception e) {
-            log.error("sql:{}更新出错{}",sql, SqlParserTool.getSqlEcception(e));
             return DbResult.error(1002, "更新出错" + SqlParserTool.getSqlEcception(e), sql).setSqlType(sqlType);
         }
     }

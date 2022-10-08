@@ -19,6 +19,7 @@ public class EasyExcelUtils {
 //            response.setContentType("application/vnd.ms-excel");
             // 这里需要设置不关闭流
             EasyExcel.write(outputStream).registerConverter( new LocalDateTimeConverter())
+                    .useDefaultStyle(false)
                     .password(data.getPassword())
                     .head(head(data.getHeadMap()))
                     .sheet(data.getFileName())

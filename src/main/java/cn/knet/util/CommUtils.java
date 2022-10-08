@@ -5,13 +5,14 @@ import cn.knet.enums.SqlType;
 import cn.knet.vo.DbResult;
 import cn.knet.vo.KnetSqlLogDetail;
 import cn.knet.vo.OldAndNewVo;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.update.Update;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.ArrayList;
@@ -28,22 +29,32 @@ public class CommUtils {
     /***
      * 包装更新和删除前后的数据
      * @param dbResult
-     * @param details
      */
-    public static void saveLogDetail(DbResult dbResult, List<KnetSqlLogDetail> details,boolean isPl,String sql,String sqlType,String msg){
+    public static List<KnetSqlLogDetail> saveLogDetail(DbResult dbResult,boolean isPl,String sql,String sqlType,String msg){
+        List<KnetSqlLogDetail> details=new ArrayList<>();
         List<Map<String, Object>> oldData = getUpdateValueByType(dbResult.getMap(), false);//更新前的数据
         List<Map<String, Object>> newData = getUpdateValueByType(dbResult.getMap(), true);//更新后的数据
-        KnetSqlLogDetail logDetail=new KnetSqlLogDetail();
-        oldData.forEach(o->{
-            logDetail.setOld(com.alibaba.fastjson.JSON.parseObject(com.alibaba.fastjson.JSON.toJSONString(o)).toString());
-            newData.forEach(n->logDetail.setNow(com.alibaba.fastjson.JSON.parseObject(com.alibaba.fastjson.JSON.toJSONString(n)).toString()));
-            if(isPl){
-                logDetail.setSql(sql);
-                logDetail.setOpType(sqlType);
-                logDetail.setSqlResu(msg);
+        if(!oldData.isEmpty()){
+            for (int i = 0; i < oldData.size(); i++) {
+                KnetSqlLogDetail logDetail=new KnetSqlLogDetail();
+                Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
+                logDetail.setOld(gson.toJson(oldData.get(i)));
+                if(!newData.isEmpty()&&sqlType.equals(SqlType.UPDATE.name())){
+                    logDetail.setNow(gson.toJson(newData.get(i)));
+                }
+                if(isPl){
+                    logDetail.setOpType(sqlType);
+                    logDetail.setSqlResu(msg);
+                    logDetail.setSql(sql.replaceFirst("\n",""));
+                }
+                details.add(logDetail);
             }
+        }else if(isPl){
+            KnetSqlLogDetail logDetail=new KnetSqlLogDetail();
+            logDetail.setSql(sql.replaceFirst("\n",""));
             details.add(logDetail);
-        });
+        }
+        return details;
     }
     /***
      * 获取新旧值
@@ -56,9 +67,7 @@ public class CommUtils {
         try {
             map.forEach((k, v) -> {
                 Map<String, Object> objectMap = new HashMap<>();
-                v.forEach(l -> {
-                    objectMap.put(l.getKey(), isNew ? l.getNewValue() : l.getOldValue());
-                });
+                v.forEach(l ->objectMap.put(l.getKey(), isNew ? l.getNewValue() : l.getOldValue()));
                 list.add(objectMap);
             });
         } catch (Exception e) {
@@ -78,10 +87,10 @@ public class CommUtils {
             String table = updateStatement.getTable().getName();
             selectSql.append(JdbcDao.getClumnsForUpdate(updateStatement, jdbcTemplate, table)).append(" from " + table);
             Expression where = updateStatement.getWhere();
-            if (where instanceof BinaryExpression) {
-                log.info("where 条件为:{}", ((BinaryExpression) where).getLeftExpression());
-                if((null != updateStatement.getTable().getAlias())){
-                    selectSql.append(" where " +where.toString().replaceFirst(updateStatement.getTable().getAlias().getName()+"."," "));//去掉别名
+            if (null!=where) {
+                if(null != updateStatement.getTable().getAlias()){
+                    String where2=where.toString().replaceFirst(updateStatement.getTable().getAlias().getName()+"\\.","");
+                    selectSql.append(" where " +where2);//去掉别名
                 }else{
                     selectSql.append(" where " + where.toString());
                 }
@@ -105,9 +114,10 @@ public class CommUtils {
             String table = deleteStatement.getTable().getName();
             StringBuilder selectSql = new StringBuilder("select * from "+table);
             Expression where = deleteStatement.getWhere();
-            if (where instanceof BinaryExpression) {
+            if (null!=where) {
                 if((null != deleteStatement.getTable().getAlias())){
-                    selectSql.append(" where " +where.toString().replaceFirst(deleteStatement.getTable().getAlias().getName()+"."," "));//去掉别名
+                    String where2=where.toString().replaceFirst(deleteStatement.getTable().getAlias().getName()+"\\."," ");
+                    selectSql.append(" where " +where2);//去掉别名
                 }else{
                     selectSql.append(" where " + where.toString());
                 }
@@ -130,19 +140,23 @@ public class CommUtils {
                     d.forEach((k,v)->{
                         OldAndNewVo vo = new OldAndNewVo();
                         vo.setKey(k).setOldValue(v).setNewValue(v);
-                        updateStatement.getColumns().forEach(c -> {
-                            if (k.equalsIgnoreCase(c.getColumnName())) {
-                                vo.setUpdate(true);
-                                String value=c.getASTNode().jjtGetLastToken().next.next.image;
-                                vo.setNewValue(StringUtils.isNotBlank(value)?value.replace("'", ""):"");
+                        List<Expression> expressionList=updateStatement.getExpressions();//获取所有的set是表达式类型的值
+                        List<Column> columnList=updateStatement.getColumns();
+                        if(!columnList.isEmpty()){
+                            for (int i = 0; i <columnList.size() ; i++) {
+                                if(columnList.get(i).getColumnName().toUpperCase().equals(k)){
+                                    vo.setUpdate(true);
+                                    String newValue=expressionList.get(i).toString();
+                                    vo.setNewValue(null!=newValue?newValue.replace("'",""):newValue);
+                                }
                             }
-                        });
+                        }
                         list.add(vo);
                     });
                  map.put(String.valueOf(n.get()), list);
                 n.set(n.get() + 1);
             });
-            String msg ="本次更新将影响"+dbResult.getCount()+"条数据,"+(dbResult.getCount()>100?"其中前100条如下":"");
+            String msg = "本次预更新操作共查询出"+dbResult.getCount()+"条数据"+(dbResult.getCount()>100?"其中前100条如下":"");
             log.info("sql{}:"+msg,sql);
             return dbResult.setCode(1000).setMsg(msg).setData(null).setMap(map).setSql(sql).setSqlType(sqlType.name());
         } catch (JSQLParserException e) {
@@ -167,4 +181,10 @@ public class CommUtils {
         });
         return map;
     }
+ /*  public static void main(String args[]) {
+        String Str =new String("update knet_registrant_rm t set t.address='河北',t.mobile='123' where t.registrant_id='linyurt'");
+        System.out.println("返回值 2:" +Str);
+        Str=Str.replaceFirst("t\\.", "" );
+        System.out.println("返回值 3:" +Str);
+    }*/
 }
